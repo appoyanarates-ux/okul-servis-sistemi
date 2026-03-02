@@ -43,6 +43,7 @@ export interface AppSettings {
   vicePrincipal3?: string; // Müdür Yrd 3
   vicePrincipal4?: string; // Müdür Yrd 4
   dutyTeachers: string[]; // Nöbetçi Öğretmenler (5 gün için)
+  teacherSignatures?: Record<string, string>; // Öğretmen İmzaları (Base64)
   // Harita Ayarları
   mapCenterLat?: number;
   mapCenterLng?: number;

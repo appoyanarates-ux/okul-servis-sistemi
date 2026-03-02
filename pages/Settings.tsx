@@ -1,7 +1,7 @@
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { AppSettings } from '../types';
-import { Save, Building2, UserCircle, Users, CheckCircle, UserPlus, Key, Eye, EyeOff, Loader2, AlertCircle, Briefcase, MapPin, Search } from 'lucide-react';
+import { Save, Building2, UserCircle, Users, CheckCircle, UserPlus, Key, Eye, EyeOff, Loader2, AlertCircle, Briefcase, MapPin, Search, PenTool, Upload, Trash2, X } from 'lucide-react';
 import { testGeminiConnection } from '../services/geminiService';
 
 interface SettingsPageProps {
@@ -9,13 +9,119 @@ interface SettingsPageProps {
   setSettings: React.Dispatch<React.SetStateAction<AppSettings>>;
 }
 
+const SignaturePad = ({ onSave, onCancel }: { onSave: (dataUrl: string) => void, onCancel: () => void }) => {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [isDrawing, setIsDrawing] = useState(false);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (canvas) {
+      canvas.width = 500;
+      canvas.height = 200;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.lineWidth = 2;
+        ctx.lineCap = 'round';
+        ctx.strokeStyle = '#000';
+      }
+    }
+  }, []);
+
+  const startDrawing = (e: React.MouseEvent | React.TouchEvent) => {
+    setIsDrawing(true);
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const rect = canvas.getBoundingClientRect();
+    let x, y;
+    if ('touches' in e) {
+      x = e.touches[0].clientX - rect.left;
+      y = e.touches[0].clientY - rect.top;
+    } else {
+      x = (e as React.MouseEvent).clientX - rect.left;
+      y = (e as React.MouseEvent).clientY - rect.top;
+    }
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+  };
+
+  const draw = (e: React.MouseEvent | React.TouchEvent) => {
+    if (!isDrawing) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const rect = canvas.getBoundingClientRect();
+    let x, y;
+    if ('touches' in e) {
+      x = e.touches[0].clientX - rect.left;
+      y = e.touches[0].clientY - rect.top;
+    } else {
+      x = (e as React.MouseEvent).clientX - rect.left;
+      y = (e as React.MouseEvent).clientY - rect.top;
+    }
+    ctx.lineTo(x, y);
+    ctx.stroke();
+  };
+
+  const stopDrawing = () => {
+    setIsDrawing(false);
+  };
+
+  const clear = () => {
+    const canvas = canvasRef.current;
+    if (canvas) {
+      const ctx = canvas.getContext('2d');
+      ctx?.clearRect(0, 0, canvas.width, canvas.height);
+    }
+  };
+
+  const save = () => {
+    const canvas = canvasRef.current;
+    if (canvas) {
+      onSave(canvas.toDataURL());
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-lg">
+        <h3 className="text-lg font-bold mb-4">İmza Çiz</h3>
+        <div className="border-2 border-dashed border-slate-300 rounded-lg mb-4 bg-slate-50 touch-none">
+          <canvas
+            ref={canvasRef}
+            className="w-full h-[200px] cursor-crosshair"
+            onMouseDown={startDrawing}
+            onMouseMove={draw}
+            onMouseUp={stopDrawing}
+            onMouseLeave={stopDrawing}
+            onTouchStart={startDrawing}
+            onTouchMove={draw}
+            onTouchEnd={stopDrawing}
+          />
+        </div>
+        <div className="flex justify-between">
+          <button onClick={clear} className="text-red-500 hover:text-red-700 text-sm font-medium px-3 py-2">Temizle</button>
+          <div className="flex gap-2">
+            <button onClick={onCancel} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg">İptal</button>
+            <button onClick={save} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Kaydet</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export const Settings: React.FC<SettingsPageProps> = ({ settings, setSettings }) => {
   const [formData, setFormData] = useState<AppSettings>(settings);
   const [isSaved, setIsSaved] = useState(false);
   const [showApiKey, setShowApiKey] = useState(false);
   const [testStatus, setTestStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
   const [geocoding, setGeocoding] = useState(false);
-  const [msg, setMsg] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+  const [signingTeacher, setSigningTeacher] = useState<string | null>(null);
 
   // Show extra admins if any of the optional fields have data
   const [showExtraAdmins, setShowExtraAdmins] = useState(
@@ -45,13 +151,41 @@ export const Settings: React.FC<SettingsPageProps> = ({ settings, setSettings })
     handleChange('dutyTeachers', newDutyTeachers);
   };
 
+  const handleSignatureUpload = (teacherName: string, e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64 = reader.result as string;
+        const newSignatures = { ...(formData.teacherSignatures || {}), [teacherName]: base64 };
+        handleChange('teacherSignatures', newSignatures);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleSignatureSave = (dataUrl: string) => {
+    if (signingTeacher) {
+      const newSignatures = { ...(formData.teacherSignatures || {}), [signingTeacher]: dataUrl };
+      handleChange('teacherSignatures', newSignatures);
+      setSigningTeacher(null);
+    }
+  };
+
+  const removeSignature = (teacherName: string) => {
+    const newSignatures = { ...(formData.teacherSignatures || {}) };
+    delete newSignatures[teacherName];
+    handleChange('teacherSignatures', newSignatures);
+  };
+
+  const uniqueTeachers = Array.from(new Set(
+    formData.dutyTeachers.flatMap(day => day.split('\n').map(t => t.trim()).filter(t => t))
+  )).sort();
+
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
     setSettings(formData);
     setIsSaved(true);
-    if (document.activeElement instanceof HTMLElement) {
-      document.activeElement.blur();
-    }
     setTimeout(() => setIsSaved(false), 3000);
   };
 
@@ -73,15 +207,14 @@ export const Settings: React.FC<SettingsPageProps> = ({ settings, setSettings })
         const lon = parseFloat(data[0].lon);
         handleChange('mapCenterLat', lat);
         handleChange('mapCenterLng', lon);
-        setMsg({ type: 'success', text: "Adres başarıyla koordinata çevrildi." });
+        alert("Adres başarıyla koordinata çevrildi ve ayarlandı.");
       } else {
-        setMsg({ type: 'error', text: "Adres bulunamadı." });
+        alert("Adres bulunamadı. Lütfen daha belirgin bir adres giriniz.");
       }
     } catch (error) {
-      setMsg({ type: 'error', text: "Konum servisine erişilemedi." });
+      alert("Konum servisine erişilemedi.");
     } finally {
       setGeocoding(false);
-      setTimeout(() => setMsg(null), 3000);
     }
   };
 
@@ -96,18 +229,6 @@ export const Settings: React.FC<SettingsPageProps> = ({ settings, setSettings })
           <div>
             <h4 className="font-bold text-lg">Başarılı</h4>
             <p className="text-green-100 text-sm">Ayarlar başarıyla kaydedildi.</p>
-          </div>
-        </div>
-      )}
-
-      {msg && (
-        <div className={`fixed bottom-6 right-6 z-50 flex items-center gap-3 ${msg.type === 'success' ? 'bg-green-600' : 'bg-red-600'} text-white px-6 py-4 rounded-xl shadow-2xl animate-slide-in-up`}>
-          <div className="bg-white/20 p-2 rounded-full">
-            {msg.type === 'success' ? <CheckCircle size={24} /> : <AlertCircle size={24} />}
-          </div>
-          <div>
-            <h4 className="font-bold text-lg">{msg.type === 'success' ? 'Başarılı' : 'Hata'}</h4>
-            <p className={`${msg.type === 'success' ? 'text-green-100' : 'text-red-100'} text-sm`}>{msg.text}</p>
           </div>
         </div>
       )}
@@ -133,7 +254,6 @@ export const Settings: React.FC<SettingsPageProps> = ({ settings, setSettings })
               <input
                 type="text"
                 required
-                autoFocus
                 className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                 value={formData.schoolName}
                 onChange={(e) => handleChange('schoolName', e.target.value)}
@@ -377,6 +497,63 @@ export const Settings: React.FC<SettingsPageProps> = ({ settings, setSettings })
           </div>
         </div>
 
+        {/* Nöbetçi Öğretmen İmzaları */}
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+          <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2 mb-4 pb-2 border-b border-slate-100">
+            <PenTool className="text-emerald-600" size={20} />
+            Nöbetçi Öğretmen İmzaları
+          </h2>
+          <p className="text-sm text-slate-500 mb-4">
+            Yukarıda tanımlanan nöbetçi öğretmenler için imza yükleyebilir veya çizebilirsiniz. Bu imzalar raporlarda kullanılacaktır.
+          </p>
+
+          {uniqueTeachers.length === 0 ? (
+            <p className="text-slate-400 italic text-sm">Henüz nöbetçi öğretmen tanımlanmamış.</p>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {uniqueTeachers.map(teacher => (
+                <div key={teacher} className="bg-slate-50 p-4 rounded-lg border border-slate-200 flex flex-col gap-3">
+                  <div className="font-bold text-slate-700">{teacher}</div>
+
+                  <div className="flex-1 bg-white border border-slate-200 rounded h-24 flex items-center justify-center overflow-hidden relative group">
+                    {formData.teacherSignatures?.[teacher] ? (
+                      <img src={formData.teacherSignatures[teacher]} alt="İmza" className="max-h-full max-w-full object-contain" />
+                    ) : (
+                      <span className="text-xs text-slate-400">İmza Yok</span>
+                    )}
+                  </div>
+
+                  <div className="flex gap-2">
+                    <label className="flex-1 cursor-pointer bg-white border border-slate-300 text-slate-600 hover:bg-slate-50 px-3 py-1.5 rounded text-xs font-medium flex items-center justify-center gap-1 transition-colors">
+                      <Upload size={14} />
+                      Yükle
+                      <input type="file" accept="image/*" className="hidden" onChange={(e) => handleSignatureUpload(teacher, e)} />
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setSigningTeacher(teacher)}
+                      className="flex-1 bg-white border border-slate-300 text-slate-600 hover:bg-slate-50 px-3 py-1.5 rounded text-xs font-medium flex items-center justify-center gap-1 transition-colors"
+                    >
+                      <PenTool size={14} />
+                      Çiz
+                    </button>
+                    {formData.teacherSignatures?.[teacher] && (
+                      <button
+                        type="button"
+                        onClick={() => removeSignature(teacher)}
+                        className="bg-red-50 border border-red-200 text-red-600 hover:bg-red-100 px-2 py-1.5 rounded transition-colors"
+                        title="İmzayı Sil"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
         {/* Yapay Zeka Ayarları */}
         <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
           <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2 mb-4 pb-2 border-b border-slate-100">
@@ -448,6 +625,13 @@ export const Settings: React.FC<SettingsPageProps> = ({ settings, setSettings })
           </button>
         </div>
       </form>
+
+      {signingTeacher && (
+        <SignaturePad
+          onSave={handleSignatureSave}
+          onCancel={() => setSigningTeacher(null)}
+        />
+      )}
     </div>
   );
 };
