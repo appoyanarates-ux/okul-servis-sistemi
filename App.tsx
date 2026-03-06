@@ -152,6 +152,13 @@ export default function App() {
     setStudents(prev => prev.filter(s => !ids.includes(s.id)));
   };
 
+  const handleBulkUpdateStudents = (updatedStudents: Student[]) => {
+    setStudents(prev => {
+      const updatedMap = new Map(updatedStudents.map(s => [s.id, s]));
+      return prev.map(s => updatedMap.has(s.id) ? updatedMap.get(s.id)! : s);
+    });
+  };
+
   const handleUpdateStudent = (updatedStudent: Student) => {
     setStudents(prev => prev.map(s => s.id === updatedStudent.id ? updatedStudent : s));
   };
@@ -173,6 +180,7 @@ export default function App() {
                 drivers={drivers}
                 onDelete={handleDeleteStudent}
                 onBulkDelete={handleBulkDeleteStudents}
+                onBulkUpdate={handleBulkUpdateStudents}
                 onUpdate={handleUpdateStudent}
                 onAdd={handleAddStudent}
                 settings={settings}
