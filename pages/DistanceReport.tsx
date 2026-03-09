@@ -2,7 +2,7 @@
 import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { Edit, Save, Plus, Trash2, X, AlertTriangle, ArrowRightLeft, FileText, Eye, MapPin, Navigation, School, Loader2, ArrowUp, ArrowDown, MousePointer2, Users, Download } from 'lucide-react';
 import { Student, AppSettings, Driver } from '../types';
-import { loadDistanceReportData, saveDistanceReportData } from '../services/storage';
+import { loadDistanceReportData, saveDistanceReportData, loadTransportPlanData, saveTransportPlanData } from '../services/storage';
 import { PrintPreview } from '../components/PrintPreview';
 import { MapContainer, TileLayer, Marker, Popup, useMap, Polyline, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
@@ -38,19 +38,19 @@ interface ReportRow {
 }
 
 const COMMON_FEATURES = [
-    "Tamamı Asfalt", 
-    "Stabilize", 
-    "Toprak Yol", 
-    "Kışın Karlı/Buzlu", 
-    "Heyelan Riski", 
+    "Tamamı Asfalt",
+    "Stabilize",
+    "Toprak Yol",
+    "Kışın Karlı/Buzlu",
+    "Heyelan Riski",
     "Dik Eğimli",
     "Virajlı"
 ];
 
 const MapController = ({ bounds }: { bounds: L.LatLngBoundsExpression | null }) => {
     const map = useMap();
-    useEffect(() => { 
-        if (bounds) map.fitBounds(bounds, { padding: [50, 50] }); 
+    useEffect(() => {
+        if (bounds) map.fitBounds(bounds, { padding: [50, 50] });
     }, [bounds, map]);
     return null;
 };
@@ -71,8 +71,9 @@ export const PrintableDistanceReport: React.FC<{
   totals: { asphalt: number, stabilize: number, total: number };
   routeCounts: Record<string, number>;
   settings: AppSettings;
+  drivers: Driver[];
   orientation?: 'portrait' | 'landscape';
-}> = ({ rows, totals, routeCounts, settings, orientation = 'landscape' }) => {
+}> = ({ rows, totals, routeCounts, settings, drivers, orientation = 'landscape' }) => {
 
   const admins = [
       { name: settings.principalName, title: 'Okul Müdürü', role: 'KOMİSYON BAŞKANI' },
@@ -97,28 +98,31 @@ export const PrintableDistanceReport: React.FC<{
         <table className="w-full border-collapse border border-black text-center table-fixed text-[10px] leading-tight">
           <thead>
             <tr className="bg-slate-100 font-bold">
-              <th className="p-1 w-[5%]">S.No</th><th className="p-1 w-[20%]">Güzergah Adı</th><th className="p-1 w-[10%]">Öğrenci Sayısı</th><th className="p-1 w-[35%]">Güzergah Özellikleri</th><th className="p-1 w-[10%]">Asfalt (KM)</th><th className="p-1 w-[10%]">Stabilize (KM)</th><th className="p-1 w-[10%]">Toplam (KM)</th>
+              <th className="p-1 w-[5%]">S.No</th><th className="p-1 w-[15%]">Güzergah Adı</th><th className="p-1 w-[15%]">Atanan Şoför</th><th className="p-1 w-[10%]">Öğrenci Sayısı</th><th className="p-1 w-[25%]">Güzergah Özellikleri</th><th className="p-1 w-[10%]">Asfalt (KM)</th><th className="p-1 w-[10%]">Stabilize (KM)</th><th className="p-1 w-[10%]">Toplam (KM)</th>
             </tr>
           </thead>
           <tbody>
-            {rows.map((row, index) => (
+            {rows.map((row, index) => {
+              const driverName = drivers.find(d => d.routes?.some(r => r?.trim() === row.route))?.name || '-';
+              return (
               <tr key={row.id} className="break-inside-avoid">
                 <td className="p-1 font-bold">{index + 1}</td>
                 <td className="text-left p-1">{row.route}</td>
+                <td className="text-left p-1">{driverName}</td>
                 <td className="p-1 font-bold">{routeCounts[row.route] || 0}</td>
                 <td className="text-left p-1">{row.features}</td>
                 <td className="p-1">{row.asphalt}</td>
                 <td className="p-1">{row.stabilize}</td>
                 <td className="p-1 font-bold">{row.total}</td>
               </tr>
-            ))}
+            )})}
             <tr className="bg-slate-100 font-bold">
-              <td className="text-right p-1" colSpan={4}>TOPLAM</td><td className="p-1">{totals.asphalt}</td><td className="p-1">{totals.stabilize}</td><td className="p-1">{totals.total}</td>
+              <td className="text-right p-1" colSpan={5}>TOPLAM</td><td className="p-1">{totals.asphalt}</td><td className="p-1">{totals.stabilize}</td><td className="p-1">{totals.total}</td>
             </tr>
           </tbody>
         </table>
         <div className="mt-8 text-xs break-inside-avoid"><p>Yukarıda dökümü yapılan güzergahların kilometreleri ve özellikleri komisyonumuzca yerinde görülerek tespit edilmiş olup iş bu tutanak imza altına alınmıştır.</p></div>
-        
+
         <div className="mt-12 flex flex-wrap justify-between gap-8 px-8 text-xs text-center font-bold break-inside-avoid">
             {admins.map((admin, idx) => (
                 <div key={idx} className="flex flex-col gap-1 items-center min-w-[120px]">
@@ -137,23 +141,23 @@ export const DistanceReport: React.FC<DistanceReportProps> = ({ students, driver
   const [rows, setRows] = useState<ReportRow[]>([]);
   const [isPreviewing, setIsPreviewing] = useState(false);
   const [orientation, setOrientation] = useState<'portrait' | 'landscape'>('landscape');
-  const [editingRow, setEditingRow] = useState<ReportRow | null>(null); // For Modal
+  const [editingRow, setEditingRow] = useState<any | null>(null); // For Modal
   const [isDownloading, setIsDownloading] = useState(false);
   const hiddenPrintRef = useRef<HTMLDivElement>(null);
-  
+
   // Map Calculation State
-  const [mapCalc, setMapCalc] = useState<{ 
-      isOpen: boolean; 
-      rowId: number; 
+  const [mapCalc, setMapCalc] = useState<{
+      isOpen: boolean;
+      rowId: number;
       calculatedDist: number | null;
       routeGeom: [number, number][] | null;
       routePoints: { name: string; lat?: number; lon?: number; studentCount?: number; studentNames?: string }[];
       mapBounds: L.LatLngBoundsExpression | null;
       loading: boolean;
       error: string | null;
-  }>({ 
-      isOpen: false, 
-      rowId: 0, 
+  }>({
+      isOpen: false,
+      rowId: 0,
       calculatedDist: null,
       routeGeom: null,
       routePoints: [],
@@ -169,28 +173,28 @@ export const DistanceReport: React.FC<DistanceReportProps> = ({ students, driver
   useEffect(() => {
     const savedRows = loadDistanceReportData();
     const savedRowsMap = new Map<string, any>(savedRows.map((r: any) => [r.route as string, r]));
-    
+
     // 1. Get routes from students
-    const studentRoutes = new Set<string>(students.map(s => s.route).filter((r): r is string => !!r && r.trim() !== ''));
-    
+    const studentRoutes = new Set<string>(students.map(s => s.route?.trim()).filter((r): r is string => !!r && r !== ''));
+
     // 2. Get routes from drivers
     const driverRoutesArray: string[] = [];
     drivers.forEach(d => {
         if (d.routes) {
-            driverRoutesArray.push(...d.routes);
+            driverRoutesArray.push(...d.routes.map(r => r?.trim()));
         }
     });
-    const driverRoutes = new Set<string>(driverRoutesArray.filter((r): r is string => !!r && r.trim() !== ''));
+    const driverRoutes = new Set<string>(driverRoutesArray.filter((r): r is string => !!r && r !== ''));
 
     // 3. Combine both
     const allRoutes = new Set<string>([...studentRoutes, ...driverRoutes]);
     const uniqueRoutes = Array.from(allRoutes).sort();
-    
+
     const newRows: ReportRow[] = uniqueRoutes.map((route: string, index) => {
         const saved = savedRowsMap.get(route);
         if (saved) {
-            return { 
-                ...saved, 
+            return {
+                ...saved,
                 id: index + 1,
                 total: (Number(saved.asphalt) || 0) + (Number(saved.stabilize) || 0)
             };
@@ -218,10 +222,15 @@ export const DistanceReport: React.FC<DistanceReportProps> = ({ students, driver
 
   const routeCounts = useMemo(() => {
     const counts: Record<string, number> = {};
-    students.forEach(student => { if(student.route) { counts[student.route] = (counts[student.route] || 0) + 1; } });
+    students.forEach(student => {
+        if(student.route) {
+            const r = student.route.trim();
+            counts[r] = (counts[r] || 0) + 1;
+        }
+    });
     return counts;
   }, [students]);
-  
+
   const totals = useMemo(() => {
     return rows.reduce((acc, row) => {
       acc.asphalt += Number(row.asphalt) || 0;
@@ -234,7 +243,7 @@ export const DistanceReport: React.FC<DistanceReportProps> = ({ students, driver
   const handleDownloadPDF = () => {
     if (!hiddenPrintRef.current) return;
     setIsDownloading(true);
-    
+
     const element = hiddenPrintRef.current;
     const opt = {
       margin: 5,
@@ -251,15 +260,40 @@ export const DistanceReport: React.FC<DistanceReportProps> = ({ students, driver
         setIsDownloading(false);
     }
   };
-  
+
   const handleSaveRow = () => {
       if (!editingRow) return;
-      setRows(prev => prev.map(r => r.id === editingRow.id ? { ...editingRow, total: Number(editingRow.asphalt) + Number(editingRow.stabilize) } : r));
+      const asphalt = Number(editingRow.asphalt);
+      const stabilize = Number(editingRow.stabilize);
+      const updatedRow: ReportRow = {
+          ...editingRow,
+          asphalt,
+          stabilize,
+          total: asphalt + stabilize
+      };
+      setRows(prev => prev.map(r => r.id === editingRow.id ? updatedRow : r));
+
+      // Sync to TransportPlanning
+      const transportData = loadTransportPlanData();
+      if (transportData[updatedRow.route]) {
+          transportData[updatedRow.route].distance = updatedRow.total;
+      } else {
+          transportData[updatedRow.route] = {
+              distance: updatedRow.total,
+              vehicleCount: 1,
+              capacity: 17,
+              dailyCost: 0,
+              yearlyCost: 0,
+              reason: 'Ulaşım Güçlüğü'
+          };
+      }
+      saveTransportPlanData(transportData);
+
       setEditingRow(null);
   };
 
   const openMapCalculator = (rowId: number, currentRoute: string) => {
-      const associatedStudents = students.filter(s => s.route === currentRoute);
+      const associatedStudents = students.filter(s => s.route?.trim() === currentRoute);
       const uniqueVillages = Array.from(new Set(associatedStudents.map(s => s.village).filter(Boolean))).sort();
 
       const pointsWithStudents = uniqueVillages.map(v => {
@@ -271,12 +305,12 @@ export const DistanceReport: React.FC<DistanceReportProps> = ({ students, driver
           };
       });
 
-      setMapCalc({ 
-          isOpen: true, 
-          rowId, 
+      setMapCalc({
+          isOpen: true,
+          rowId,
           calculatedDist: null,
           routeGeom: null,
-          routePoints: pointsWithStudents, 
+          routePoints: pointsWithStudents,
           mapBounds: null,
           loading: false,
           error: uniqueVillages.length === 0 ? "Kayıtlı köy bulunamadı. Lütfen manuel ekleyiniz." : null
@@ -306,11 +340,11 @@ export const DistanceReport: React.FC<DistanceReportProps> = ({ students, driver
 
   const addRoutePoint = () => {
       if (newPointName.trim()) {
-          setMapCalc(prev => ({ 
-              ...prev, 
-              routePoints: [...prev.routePoints, { name: newPointName, studentCount: 0 }], 
-              calculatedDist: null, 
-              routeGeom: null 
+          setMapCalc(prev => ({
+              ...prev,
+              routePoints: [...prev.routePoints, { name: newPointName, studentCount: 0 }],
+              calculatedDist: null,
+              routeGeom: null
           }));
           setNewPointName('');
       }
@@ -341,7 +375,7 @@ export const DistanceReport: React.FC<DistanceReportProps> = ({ students, driver
 
       try {
           const geocodedPoints: { lat: number; lon: number; name: string }[] = [];
-          
+
           for (const point of mapCalc.routePoints) {
               // Eğer zaten koordinatı varsa (haritadan eklenmiş veya daha önce bulunmuşsa)
               if (point.lat && point.lon) {
@@ -351,7 +385,7 @@ export const DistanceReport: React.FC<DistanceReportProps> = ({ students, driver
                   const query = `${point.name}, ${settings.district}, ${settings.province}, Türkiye`;
                   const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1`);
                   const data = await res.json();
-                  
+
                   if (data && data.length > 0) {
                       geocodedPoints.push({ lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon), name: point.name });
                   } else {
@@ -367,7 +401,7 @@ export const DistanceReport: React.FC<DistanceReportProps> = ({ students, driver
 
           let coordinates = geocodedPoints.map(p => `${p.lon},${p.lat}`).join(';');
           // Add School as destination
-          coordinates += `;${schoolCoords[1]},${schoolCoords[0]}`; 
+          coordinates += `;${schoolCoords[1]},${schoolCoords[0]}`;
 
           const routerUrl = `https://router.project-osrm.org/route/v1/driving/${coordinates}?overview=full&geometries=geojson`;
           const routeRes = await fetch(routerUrl);
@@ -383,9 +417,9 @@ export const DistanceReport: React.FC<DistanceReportProps> = ({ students, driver
           // Calculate bounds for map fit
           const lats = [...geocodedPoints.map(p => p.lat), schoolCoords[0]];
           const lons = [...geocodedPoints.map(p => p.lon), schoolCoords[1]];
-          
-          setMapCalc(prev => ({ 
-              ...prev, 
+
+          setMapCalc(prev => ({
+              ...prev,
               loading: false,
               routePoints: mapCalc.routePoints.map((p, i) => ({ ...p, lat: geocodedPoints[i].lat, lon: geocodedPoints[i].lon })), // Update lat/lon for markers
               calculatedDist: distKm,
@@ -401,23 +435,46 @@ export const DistanceReport: React.FC<DistanceReportProps> = ({ students, driver
 
   const applyDistanceToRow = () => {
       if (mapCalc.calculatedDist !== null && mapCalc.rowId) {
-          setRows(prev => prev.map(r => r.id === mapCalc.rowId ? { ...r, asphalt: mapCalc.calculatedDist!, stabilize: 0, total: mapCalc.calculatedDist! } : r));
+          setRows(prev => prev.map(r => {
+              if (r.id === mapCalc.rowId) {
+                  const updatedRow = { ...r, asphalt: mapCalc.calculatedDist!, stabilize: 0, total: mapCalc.calculatedDist! };
+
+                  // Sync to TransportPlanning
+                  const transportData = loadTransportPlanData();
+                  if (transportData[updatedRow.route]) {
+                      transportData[updatedRow.route].distance = updatedRow.total;
+                  } else {
+                      transportData[updatedRow.route] = {
+                          distance: updatedRow.total,
+                          vehicleCount: 1,
+                          capacity: 17,
+                          dailyCost: 0,
+                          yearlyCost: 0,
+                          reason: 'Ulaşım Güçlüğü'
+                      };
+                  }
+                  saveTransportPlanData(transportData);
+
+                  return updatedRow;
+              }
+              return r;
+          }));
           setMapCalc({ ...mapCalc, isOpen: false });
       }
   };
-  
+
   return (
     <div className="space-y-6">
       {isPreviewing && (
-        <PrintPreview 
-          title="Mesafe Tutanağı" 
+        <PrintPreview
+          title="Mesafe Tutanağı"
           onBack={() => setIsPreviewing(false)}
           orientation={orientation}
         >
-          <PrintableDistanceReport 
-             rows={rows} 
+          <PrintableDistanceReport
+             rows={rows}
              totals={totals}
-             routeCounts={routeCounts} 
+             routeCounts={routeCounts}
              settings={settings}
              orientation={orientation}
           />
@@ -427,10 +484,10 @@ export const DistanceReport: React.FC<DistanceReportProps> = ({ students, driver
       {/* Hidden for PDF generation */}
       <div className="hidden">
           <div ref={hiddenPrintRef}>
-            <PrintableDistanceReport 
-                rows={rows} 
+            <PrintableDistanceReport
+                rows={rows}
                 totals={totals}
-                routeCounts={routeCounts} 
+                routeCounts={routeCounts}
                 settings={settings}
                 orientation={orientation}
             />
@@ -453,13 +510,13 @@ export const DistanceReport: React.FC<DistanceReportProps> = ({ students, driver
                           </div>
                           <div className="space-y-2">
                               <label className="block text-xs font-bold text-slate-500 uppercase">Öğrenci Alım Noktaları</label>
-                              
+
                               <div className="flex gap-2 mb-2">
-                                  <input 
+                                  <input
                                     autoFocus
-                                    type="text" 
-                                    className="flex-1 px-2 py-1.5 border border-slate-300 rounded text-sm outline-none focus:ring-1 focus:ring-blue-500" 
-                                    placeholder="Durak / Köy Adı..." 
+                                    type="text"
+                                    className="flex-1 px-2 py-1.5 border border-slate-300 rounded text-sm outline-none focus:ring-1 focus:ring-blue-500"
+                                    placeholder="Durak / Köy Adı..."
                                     value={newPointName}
                                     onChange={(e) => setNewPointName(e.target.value)}
                                     onKeyDown={(e) => e.key === 'Enter' && addRoutePoint()}
@@ -511,9 +568,9 @@ export const DistanceReport: React.FC<DistanceReportProps> = ({ students, driver
                               <MapClickHandler onMapClick={handleMapClick} />
                               <Marker position={schoolCoords} icon={iconSchool}><Popup><strong>{settings.schoolName}</strong></Popup></Marker>
                               {mapCalc.routePoints.map((point, idx) => (point.lat && point.lon && (
-                                <Marker 
-                                    key={idx} 
-                                    position={[point.lat, point.lon]} 
+                                <Marker
+                                    key={idx}
+                                    position={[point.lat, point.lon]}
                                     icon={iconStop}
                                     draggable={true}
                                     eventHandlers={{
@@ -574,11 +631,11 @@ export const DistanceReport: React.FC<DistanceReportProps> = ({ students, driver
                       <div className="grid grid-cols-2 gap-4">
                           <div>
                               <label className="block text-sm font-medium text-slate-700 mb-1">Asfalt (KM)</label>
-                              <input type="number" className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" value={editingRow.asphalt} onChange={(e) => setEditingRow({ ...editingRow, asphalt: Number(e.target.value) })} />
+                              <input type="number" className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" value={editingRow.asphalt} onChange={(e) => setEditingRow({ ...editingRow, asphalt: e.target.value })} />
                           </div>
                           <div>
                               <label className="block text-sm font-medium text-slate-700 mb-1">Stabilize (KM)</label>
-                              <input type="number" className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" value={editingRow.stabilize} onChange={(e) => setEditingRow({ ...editingRow, stabilize: Number(e.target.value) })} />
+                              <input type="number" className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" value={editingRow.stabilize} onChange={(e) => setEditingRow({ ...editingRow, stabilize: e.target.value })} />
                           </div>
                       </div>
                       <div className="bg-slate-50 p-3 rounded-lg flex justify-between items-center border border-slate-100">
@@ -609,7 +666,7 @@ export const DistanceReport: React.FC<DistanceReportProps> = ({ students, driver
           <button onClick={handleDownloadPDF} disabled={isDownloading} className="flex items-center space-x-2 bg-red-50 text-red-700 hover:bg-red-100 px-3 py-2 rounded-lg transition-colors font-medium border border-red-200 shadow-sm disabled:opacity-50"><Download size={16} /><span className="hidden sm:inline">{isDownloading ? '...' : 'PDF İndir'}</span></button>
         </div>
       </div>
-      
+
       {/* Data Grid View */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
           <div className="overflow-x-auto">
@@ -618,6 +675,7 @@ export const DistanceReport: React.FC<DistanceReportProps> = ({ students, driver
                       <tr>
                           <th className="px-6 py-4 w-16">S.No</th>
                           <th className="px-6 py-4">Güzergah</th>
+                          <th className="px-6 py-4">Atanan Şoför</th>
                           <th className="px-6 py-4">Öğrenci</th>
                           <th className="px-6 py-4 w-1/3">Özellikler</th>
                           <th className="px-6 py-4 text-center">Asfalt</th>
@@ -631,6 +689,7 @@ export const DistanceReport: React.FC<DistanceReportProps> = ({ students, driver
                           <tr key={row.id} className="hover:bg-slate-50 transition-colors">
                               <td className="px-6 py-4 text-slate-500 font-mono">{index + 1}</td>
                               <td className="px-6 py-4 font-medium text-slate-800">{row.route}</td>
+                              <td className="px-6 py-4 text-slate-600">{drivers.find(d => d.routes?.some(r => r?.trim() === row.route))?.name || <span className="text-slate-400 italic">Atanmamış</span>}</td>
                               <td className="px-6 py-4"><span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">{routeCounts[row.route] || 0}</span></td>
                               <td className="px-6 py-4 text-slate-600 truncate max-w-xs" title={row.features}>{row.features}</td>
                               <td className="px-6 py-4 text-center text-slate-600">{row.asphalt}</td>
@@ -649,7 +708,7 @@ export const DistanceReport: React.FC<DistanceReportProps> = ({ students, driver
                   {rows.length > 0 && (
                       <tfoot className="bg-slate-50 font-bold text-slate-700">
                           <tr>
-                              <td colSpan={4} className="px-6 py-4 text-right">GENEL TOPLAM</td>
+                              <td colSpan={5} className="px-6 py-4 text-right">GENEL TOPLAM</td>
                               <td className="px-6 py-4 text-center">{totals.asphalt}</td>
                               <td className="px-6 py-4 text-center">{totals.stabilize}</td>
                               <td className="px-6 py-4 text-center">{totals.total}</td>

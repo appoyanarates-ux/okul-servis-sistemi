@@ -254,7 +254,7 @@ export default function App() {
             }
           />
           <Route path="/reports" element={<Reports students={students} drivers={drivers} settings={settings} />} />
-          <Route path="/planning" element={<TransportPlanning students={students} settings={settings} />} />
+          <Route path="/planning" element={<TransportPlanning students={students} drivers={drivers} settings={settings} />} />
           <Route path="/distance-report" element={<DistanceReport students={students} drivers={drivers} settings={settings} />} />
           <Route path="/upload" element={<Upload onDataLoaded={handleUploadData} students={students} drivers={drivers} />} />
           <Route path="/about" element={<About />} />

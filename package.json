@@ -1,7 +1,7 @@
 {
   "name": "okul-servis-tasima-sistemi",
   "private": true,
-  "version": "1.1.9",
+  "version": "1.2.0",
   "main": "electron.js",
   "scripts": {
     "dev": "vite",
