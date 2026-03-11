@@ -1,7 +1,7 @@
 {
   "name": "okul-servis-tasima-sistemi",
   "private": true,
-  "version": "1.2.1",
+  "version": "1.2.2",
   "main": "electron.js",
   "scripts": {
     "dev": "vite",
@@ -45,7 +45,8 @@
     "files": [
       "dist/**/*",
       "electron.js",
-      "package.json"
+      "package.json",
+      "updater.html"
     ],
     "win": {
       "target": "nsis"
