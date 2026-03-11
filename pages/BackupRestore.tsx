@@ -15,18 +15,20 @@ export const BackupRestore: React.FC<BackupRestoreProps> = ({ students, drivers,
   const [restoreStatus, setRestoreStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [statusMessage, setStatusMessage] = useState('');
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [backupStudents, setBackupStudents] = useState(true);
+  const [backupDrivers, setBackupDrivers] = useState(true);
 
   // Verileri Yedekle (İndir)
   const handleBackup = () => {
-    const backupData = {
+    const backupData: any = {
       version: '1.0',
       timestamp: new Date().toISOString(),
       source: 'OkulServis Yönetim Sistemi',
-      data: {
-        students: students,
-        drivers: drivers
-      }
+      data: {}
     };
+
+    if (backupStudents) backupData.data.students = students;
+    if (backupDrivers) backupData.data.drivers = drivers;
 
     const fileName = `okulservis_yedek_${new Date().toLocaleDateString('tr-TR').replace(/\./g, '-')}.json`;
     const jsonString = JSON.stringify(backupData, null, 2);
@@ -52,15 +54,15 @@ export const BackupRestore: React.FC<BackupRestoreProps> = ({ students, drivers,
         let newDrivers: Driver[] = [];
 
         if (parsedData.data && Array.isArray(parsedData.data.students)) {
-          // Bizim oluşturduğumuz yeni format
-          newStudents = parsedData.data.students;
-          newDrivers = parsedData.data.drivers || [];
+           // Bizim oluşturduğumuz yeni format
+           newStudents = parsedData.data.students;
+           newDrivers = parsedData.data.drivers || [];
         } else if (Array.isArray(parsedData.students)) {
-          // Doğrudan state formatı (manuel yedeklenmiş olabilir)
-          newStudents = parsedData.students;
-          newDrivers = parsedData.drivers || [];
+           // Doğrudan state formatı (manuel yedeklenmiş olabilir)
+           newStudents = parsedData.students;
+           newDrivers = parsedData.drivers || [];
         } else {
-          throw new Error("Geçersiz yedek dosyası formatı.");
+           throw new Error("Geçersiz yedek dosyası formatı.");
         }
 
         // State güncelle
@@ -86,7 +88,6 @@ export const BackupRestore: React.FC<BackupRestoreProps> = ({ students, drivers,
     setStudents([]);
     setDrivers([]);
     setShowResetConfirm(false);
-    if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
     setRestoreStatus('success');
     setStatusMessage("Tüm veriler başarıyla sıfırlandı. Sistem fabrika ayarlarına döndü.");
   };
@@ -111,20 +112,21 @@ export const BackupRestore: React.FC<BackupRestoreProps> = ({ students, drivers,
             </p>
           </div>
 
-          <div className="bg-slate-50 w-full p-4 rounded-xl border border-slate-100 text-left space-y-2">
-            <div className="flex justify-between text-sm">
-              <span className="text-slate-600">Öğrenci Sayısı:</span>
-              <span className="font-bold text-slate-800">{students.length}</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-slate-600">Şoför Sayısı:</span>
-              <span className="font-bold text-slate-800">{drivers.length}</span>
-            </div>
+          <div className="bg-slate-50 w-full p-4 rounded-xl border border-slate-100 text-left space-y-3">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" checked={backupStudents} onChange={(e) => setBackupStudents(e.target.checked)} className="rounded text-blue-600 focus:ring-blue-500" />
+              <span className="text-sm text-slate-700">Öğrenci Verileri ({students.length})</span>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" checked={backupDrivers} onChange={(e) => setBackupDrivers(e.target.checked)} className="rounded text-blue-600 focus:ring-blue-500" />
+              <span className="text-sm text-slate-700">Şoför Verileri ({drivers.length})</span>
+            </label>
           </div>
 
           <button
             onClick={handleBackup}
-            className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold shadow-lg shadow-blue-200 transition-all active:scale-95 flex items-center justify-center gap-2"
+            disabled={!backupStudents && !backupDrivers}
+            className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold shadow-lg shadow-blue-200 transition-all active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Database size={18} />
             Yedeği İndir
@@ -144,10 +146,10 @@ export const BackupRestore: React.FC<BackupRestoreProps> = ({ students, drivers,
           </div>
 
           <div className="bg-orange-50 w-full p-3 rounded-xl border border-orange-100 flex items-start gap-3 text-left">
-            <AlertTriangle className="text-orange-500 shrink-0 mt-0.5" size={18} />
-            <p className="text-xs text-orange-700 leading-relaxed">
-              <b>Dikkat:</b> Geri yükleme işlemi mevcut verilerin üzerine yazacaktır. İşleme devam etmeden önce mevcut verilerin yedeğini almanız önerilir.
-            </p>
+             <AlertTriangle className="text-orange-500 shrink-0 mt-0.5" size={18} />
+             <p className="text-xs text-orange-700 leading-relaxed">
+               <b>Dikkat:</b> Geri yükleme işlemi mevcut verilerin üzerine yazacaktır. İşleme devam etmeden önce mevcut verilerin yedeğini almanız önerilir.
+             </p>
           </div>
 
           <input
@@ -184,8 +186,8 @@ export const BackupRestore: React.FC<BackupRestoreProps> = ({ students, drivers,
       <div className="mt-12 pt-8 border-t border-slate-200">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-lg font-bold text-red-600 flex items-center gap-2"><Trash2 size={20} /> Verileri Sıfırla</h3>
-            <p className="text-sm text-slate-500">Tüm verileri siler ve uygulamayı başlangıç durumuna getirir.</p>
+             <h3 className="text-lg font-bold text-red-600 flex items-center gap-2"><Trash2 size={20} /> Verileri Sıfırla</h3>
+             <p className="text-sm text-slate-500">Tüm verileri siler ve uygulamayı başlangıç durumuna getirir.</p>
           </div>
           <button
             onClick={() => setShowResetConfirm(true)}
@@ -218,7 +220,6 @@ export const BackupRestore: React.FC<BackupRestoreProps> = ({ students, drivers,
               </button>
               <button
                 onClick={handleResetData}
-                autoFocus
                 className="flex-1 py-3 bg-red-600 text-white hover:bg-red-700 rounded-xl font-bold transition-colors shadow-lg shadow-red-200"
               >
                 Evet, Hepsini Sil

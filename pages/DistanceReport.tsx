@@ -76,13 +76,9 @@ export const PrintableDistanceReport: React.FC<{
 }> = ({ rows, totals, routeCounts, settings, drivers, orientation = 'landscape' }) => {
 
   const admins = [
-      { name: settings.principalName, title: 'Okul Müdürü', role: 'KOMİSYON BAŞKANI' },
-      settings.principalName2 ? { name: settings.principalName2, title: 'Okul Müdürü', role: 'ÜYE' } : null,
-      settings.vicePrincipal1 ? { name: settings.vicePrincipal1, title: 'Müdür Yardımcısı', role: 'ÜYE' } : null,
-      settings.vicePrincipal2 ? { name: settings.vicePrincipal2, title: 'Müdür Yardımcısı', role: 'ÜYE' } : null,
-      settings.vicePrincipal3 ? { name: settings.vicePrincipal3, title: 'Müdür Yardımcısı', role: 'ÜYE' } : null,
-      settings.vicePrincipal4 ? { name: settings.vicePrincipal4, title: 'Müdür Yardımcısı', role: 'ÜYE' } : null,
-  ].filter(Boolean);
+      ...settings.principals.map((p, i) => ({ name: p, title: 'Okul Müdürü', role: i === 0 ? 'KOMİSYON BAŞKANI' : 'ÜYE' })),
+      ...settings.vicePrincipals.map(vp => ({ name: vp, title: 'Müdür Yardımcısı', role: 'ÜYE' })),
+  ];
 
   return (
     <div className="bg-white p-4 font-sans" id="printable-distance-report">
@@ -103,7 +99,7 @@ export const PrintableDistanceReport: React.FC<{
           </thead>
           <tbody>
             {rows.map((row, index) => {
-              const driverName = drivers.find(d => d.routes?.some(r => r?.trim() === row.route))?.name || '-';
+              const driverName = (drivers || []).find(d => d.routes?.some(r => r?.trim() === row.route))?.name || '-';
               return (
               <tr key={row.id} className="break-inside-avoid">
                 <td className="p-1 font-bold">{index + 1}</td>

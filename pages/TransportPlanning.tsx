@@ -113,16 +113,24 @@ export const PrintableTransportPlan: React.FC<{
       <div className="mt-12 flex justify-around px-8 text-xs text-center font-bold break-inside-avoid">
           <div className="flex flex-col gap-8 min-w-[150px]">
               <div>DÜZENLEYEN</div>
-              <div>
-                  {settings.vicePrincipal1}<br/>
-                  <span className="font-normal">Müdür Yardımcısı</span>
+              <div className="space-y-4">
+                  {settings.vicePrincipals.map((vp, i) => (
+                      <div key={i}>
+                          {vp}<br/>
+                          <span className="font-normal">Müdür Yardımcısı</span>
+                      </div>
+                  ))}
               </div>
           </div>
           <div className="flex flex-col gap-8 min-w-[150px]">
               <div>ONAYLAYAN</div>
-              <div>
-                  {settings.principalName}<br/>
-                  <span className="font-normal">Okul Müdürü</span>
+              <div className="space-y-4">
+                  {settings.principals.map((p, i) => (
+                      <div key={i}>
+                          {p}<br/>
+                          <span className="font-normal">Okul Müdürü</span>
+                      </div>
+                  ))}
               </div>
           </div>
       </div>
@@ -158,6 +166,8 @@ export const TransportPlanning: React.FC<TransportPlanningProps> = ({ students, 
         for (let i = 1; i <= 8; i++) initialClasses[i] = { K: 0, E: 0 };
 
         const distance = distanceMap.has(routeName) ? distanceMap.get(routeName) : (saved.distance || 0);
+        const driver = drivers.find(d => d.routes.includes(routeName));
+        const seatCount = driver?.seatCount;
 
         routeMap.set(routeName, {
             id: routeName,
@@ -165,7 +175,7 @@ export const TransportPlanning: React.FC<TransportPlanningProps> = ({ students, 
             distance: distance,
             classes: initialClasses,
             vehicleCount: saved.vehicleCount || 1,
-            capacity: saved.capacity || 17,
+            capacity: seatCount || saved.capacity || 17,
             dailyCost: saved.dailyCost || 0,
             yearlyCost: saved.yearlyCost || 0,
             reason: saved.reason || 'Ulaşım Güçlüğü'
@@ -185,7 +195,7 @@ export const TransportPlanning: React.FC<TransportPlanningProps> = ({ students, 
     const calculatedRows = Array.from(routeMap.values()).sort((a, b) => a.route.localeCompare(b.route));
     setRows(calculatedRows);
 
-  }, [students]);
+  }, [students, drivers]);
 
   useEffect(() => {
       if (rows.length > 0) {
@@ -237,8 +247,7 @@ export const TransportPlanning: React.FC<TransportPlanningProps> = ({ students, 
       const existingDistIndex = distanceData.findIndex((r: any) => r.route === updatedRow.route);
       if (existingDistIndex >= 0) {
           distanceData[existingDistIndex].asphalt = updatedRow.distance;
-          distanceData[existingDistIndex].stabilize = 0;
-          distanceData[existingDistIndex].total = updatedRow.distance;
+          distanceData[existingDistIndex].total = updatedRow.distance + (distanceData[existingDistIndex].stabilize || 0);
       } else {
           distanceData.push({
               id: distanceData.length + 1,

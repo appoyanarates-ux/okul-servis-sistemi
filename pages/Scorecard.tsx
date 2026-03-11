@@ -49,46 +49,32 @@ const ScorecardSheet: React.FC<{
       </table>
       <div className="border border-black border-t-0 p-2 text-[9px]">
         <div className="flex gap-2 mb-4"><span className="font-bold">NOT:</span><div><p>PUANTAJLAR ÇALIŞILAN AYIN BİTİMİNİ TAKİBEN İLK İŞ GÜNÜ MÜDÜRLÜĞÜMÜZE TESLİM EDİLECEKTİR.</p><p>PUANTAJLAR HER YÜKLENİCİ VE ŞOFÖR İÇİN MÜSTAKİL OLARAK TANZİM EDİLECEKTİR.</p></div></div>
-        
+
         {/* Dynamic Signature Block */}
         <div className="flex justify-around text-center mt-8 gap-4">
-            {settings.vicePrincipal1 && (
-                <div className="flex flex-col gap-12 min-w-[100px]">
-                    <span className="font-bold">DÜZENLEYEN</span>
-                    <div className="flex flex-col">
-                        <span className="font-bold">{settings.vicePrincipal1}</span>
-                        <span>Müdür Yardımcısı</span>
-                    </div>
-                </div>
-            )}
-            
-            {settings.vicePrincipal2 && (
-                <div className="flex flex-col gap-12 min-w-[100px]">
-                    <span className="font-bold">DÜZENLEYEN</span>
-                    <div className="flex flex-col">
-                        <span className="font-bold">{settings.vicePrincipal2}</span>
-                        <span>Müdür Yardımcısı</span>
-                    </div>
-                </div>
-            )}
-
             <div className="flex flex-col gap-12 min-w-[100px]">
-                <span className="font-bold">TASDİK OLUNUR</span>
-                <div className="flex flex-col">
-                    <span className="font-bold">{settings.principalName}</span>
-                    <span>Okul Müdürü</span>
+                <span className="font-bold">DÜZENLEYEN</span>
+                <div className="space-y-4">
+                    {settings.vicePrincipals.map((vp, i) => (
+                        <div key={i} className="flex flex-col">
+                            <span className="font-bold">{vp}</span>
+                            <span>Müdür Yardımcısı</span>
+                        </div>
+                    ))}
                 </div>
             </div>
 
-            {settings.principalName2 && (
-                <div className="flex flex-col gap-12 min-w-[100px]">
-                    <span className="font-bold">TASDİK OLUNUR</span>
-                    <div className="flex flex-col">
-                        <span className="font-bold">{settings.principalName2}</span>
-                        <span>Okul Müdürü</span>
-                    </div>
+            <div className="flex flex-col gap-12 min-w-[100px]">
+                <span className="font-bold">TASDİK OLUNUR</span>
+                <div className="space-y-4">
+                    {settings.principals.map((p, i) => (
+                        <div key={i} className="flex flex-col">
+                            <span className="font-bold">{p}</span>
+                            <span>Okul Müdürü</span>
+                        </div>
+                    ))}
                 </div>
-            )}
+            </div>
         </div>
       </div>
     </div>
@@ -200,12 +186,12 @@ export const Scorecard: React.FC<ScorecardProps> = ({ students, drivers, setting
         alert("Lütfen önce bir şoför seçiniz.");
         return;
     }
-    
+
     setIsDownloading(true);
-    
+
     const element = hiddenPrintRef.current;
     const filename = `Puantaj_${monthNames[selectedMonth]}_${selectedYear}.pdf`;
-    
+
     const opt = {
       margin: 5, // mm (matches css)
       filename: filename,
@@ -223,26 +209,26 @@ export const Scorecard: React.FC<ScorecardProps> = ({ students, drivers, setting
         setIsDownloading(false);
     }
   };
-  
+
   return (
     <div className={`space-y-6 ${!isEmbedded ? 'animate-fade-in' : ''}`}>
       {isPreviewing && (
-        <PrintPreview 
-          title={`Puantaj - ${monthNames[selectedMonth]} ${selectedYear}`} 
+        <PrintPreview
+          title={`Puantaj - ${monthNames[selectedMonth]} ${selectedYear}`}
           onBack={() => setIsPreviewing(false)}
           orientation={orientation}
         >
-          <PrintableScorecard 
-            students={students} 
-            drivers={drivers} 
+          <PrintableScorecard
+            students={students}
+            drivers={drivers}
             settings={settings}
-            isBulkPrint={isBulkPrint} 
-            selectedDriver={selectedDriver} 
-            plateNumber={plateNumber} 
-            firmName={settings.firmName} 
-            monthName={monthNames[selectedMonth]} 
-            year={selectedYear} 
-            filteredRows={filteredRows} 
+            isBulkPrint={isBulkPrint}
+            selectedDriver={selectedDriver}
+            plateNumber={plateNumber}
+            firmName={settings.firmName}
+            monthName={monthNames[selectedMonth]}
+            year={selectedYear}
+            filteredRows={filteredRows}
             driverInfo={driverInfo}
             orientation={orientation}
           />
@@ -252,17 +238,17 @@ export const Scorecard: React.FC<ScorecardProps> = ({ students, drivers, setting
       {/* Hidden container for PDF generation */}
       <div className="hidden">
           <div ref={hiddenPrintRef}>
-             <PrintableScorecard 
-                students={students} 
-                drivers={drivers} 
+             <PrintableScorecard
+                students={students}
+                drivers={drivers}
                 settings={settings}
-                isBulkPrint={isBulkPrint} 
-                selectedDriver={selectedDriver} 
-                plateNumber={plateNumber} 
-                firmName={settings.firmName} 
-                monthName={monthNames[selectedMonth]} 
-                year={selectedYear} 
-                filteredRows={filteredRows} 
+                isBulkPrint={isBulkPrint}
+                selectedDriver={selectedDriver}
+                plateNumber={plateNumber}
+                firmName={settings.firmName}
+                monthName={monthNames[selectedMonth]}
+                year={selectedYear}
+                filteredRows={filteredRows}
                 driverInfo={driverInfo}
                 orientation={orientation}
               />
@@ -289,23 +275,23 @@ export const Scorecard: React.FC<ScorecardProps> = ({ students, drivers, setting
         </div>
         <div className="flex flex-col xl:flex-row items-center justify-between p-4 bg-slate-50 rounded-lg border border-slate-200 gap-4">
           <div className="flex items-center space-x-3 w-full xl:w-auto"><div onClick={() => setIsBulkPrint(!isBulkPrint)} className={`w-10 h-6 flex items-center rounded-full p-1 cursor-pointer transition-colors duration-300 ${isBulkPrint ? 'bg-indigo-600' : 'bg-slate-300'}`}><div className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-300 ${isBulkPrint ? 'translate-x-4' : 'translate-x-0'}`}></div></div><span className="text-sm font-medium text-slate-700 flex items-center gap-2"><Users size={16} className="text-indigo-600" />Tüm Şoförler (Toplu Mod)</span></div>
-          
+
           <div className="flex flex-wrap items-center gap-3 w-full xl:w-auto justify-end">
              <div className="flex items-center bg-white border border-slate-200 rounded-lg p-1 mr-2">
-                <button 
+                <button
                   onClick={() => setOrientation('portrait')}
                   className={`px-3 py-1.5 rounded text-xs font-medium flex items-center gap-1 transition-colors ${orientation === 'portrait' ? 'bg-blue-100 text-blue-700' : 'text-slate-500 hover:bg-slate-50'}`}
                 >
                   <FileText size={14} /> Dikey
                 </button>
-                <button 
+                <button
                   onClick={() => setOrientation('landscape')}
                   className={`px-3 py-1.5 rounded text-xs font-medium flex items-center gap-1 transition-colors ${orientation === 'landscape' ? 'bg-blue-100 text-blue-700' : 'text-slate-500 hover:bg-slate-50'}`}
                 >
                   <ArrowRightLeft size={14} /> Yatay
                 </button>
              </div>
-             
+
              <button onClick={() => setIsPreviewing(true)} className="flex items-center space-x-2 bg-violet-50 text-violet-700 hover:bg-violet-100 px-3 py-2 rounded-lg transition-colors font-medium border border-violet-200" title="Önizle"><Eye size={16} /><span className="hidden xl:inline">Önizle</span></button>
              <button onClick={handleDownloadPDF} disabled={isDownloading} className="flex items-center space-x-2 bg-red-50 text-red-700 hover:bg-red-100 px-3 py-2 rounded-lg transition-colors font-medium border border-red-200" type="button"><Download size={16} /><span className="hidden sm:inline">{isDownloading ? 'İndiriliyor...' : 'PDF İndir'}</span></button>
              <button onClick={() => setIsPreviewing(true)} className="flex items-center space-x-2 bg-slate-100 text-slate-700 hover:bg-slate-200 px-3 py-2 rounded-lg transition-colors font-medium border border-slate-300" type="button"><Printer size={16} /><span className="hidden sm:inline">PDF Yazdır</span></button>

@@ -11,12 +11,8 @@ export const INITIAL_SETTINGS: AppSettings = {
   district: 'KADİRLİ',
   educationYear: '2025 - 2026',
   firmName: 'DOĞAN GÜNEŞ', // Varsayılan Firma
-  principalName: 'Gökhan CANSEVER', // Varsayılan Müdür
-  principalName2: '',
-  vicePrincipal1: 'Abdullah YANARATEŞ', // Varsayılan Md Yrd
-  vicePrincipal2: 'Ümmet YAĞIZ', // Varsayılan Md Yrd 2
-  vicePrincipal3: '',
-  vicePrincipal4: '',
+  principals: ['Gökhan CANSEVER'],
+  vicePrincipals: ['Abdullah YANARATEŞ', 'Ümmet YAĞIZ'],
   dutyTeachers: ['', '', '', '', ''], // Pzt, Sal, Çar, Per, Cum için boş başlangıç
   mapCenterLat: 37.5350,
   mapCenterLng: 36.1950,

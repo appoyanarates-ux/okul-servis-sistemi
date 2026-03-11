@@ -36,12 +36,8 @@ export interface AppSettings {
   district: string;
   educationYear: string;
   firmName: string; // Taşıma Yapan Firma Adı
-  principalName: string; // Okul Müdürü 1
-  principalName2?: string; // Okul Müdürü 2
-  vicePrincipal1: string; // Müdür Yrd 1
-  vicePrincipal2: string; // Müdür Yrd 2
-  vicePrincipal3?: string; // Müdür Yrd 3
-  vicePrincipal4?: string; // Müdür Yrd 4
+  principals: string[]; // Okul Müdürleri
+  vicePrincipals: string[]; // Müdür Yardımcıları
   dutyTeachers: string[]; // Nöbetçi Öğretmenler (5 gün için)
   teacherSignatures?: Record<string, string>; // Öğretmen İmzaları (Base64)
   // Harita Ayarları

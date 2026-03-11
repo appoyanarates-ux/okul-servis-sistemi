@@ -1,7 +1,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { AppSettings } from '../types';
-import { Save, Building2, UserCircle, Users, CheckCircle, UserPlus, Key, Eye, EyeOff, Loader2, AlertCircle, Briefcase, MapPin, Search, PenTool, Upload, Trash2, X } from 'lucide-react';
+import { Save, Building2, UserCircle, Users, CheckCircle, UserPlus, Key, Eye, EyeOff, Loader2, AlertCircle, Briefcase, MapPin, Search, PenTool, Upload, Trash2, X, Plus } from 'lucide-react';
 import { testGeminiConnection } from '../services/geminiService';
 
 interface SettingsPageProps {
@@ -378,79 +378,42 @@ export const Settings: React.FC<SettingsPageProps> = ({ settings, setSettings })
             </button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-6">
              <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Okul Müdürü</label>
-              <input
-                type="text"
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                value={formData.principalName}
-                onChange={(e) => handleChange('principalName', e.target.value)}
-                placeholder="Ad Soyad"
-              />
+              <label className="block text-sm font-medium text-slate-700 mb-2">Okul Müdürleri</label>
+              {formData.principals.map((p, i) => (
+                  <div key={i} className="flex gap-2 mb-2">
+                      <input type="text" className="flex-1 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" value={p} onChange={(e) => {
+                          const newPrincipals = [...formData.principals];
+                          newPrincipals[i] = e.target.value;
+                          handleChange('principals', newPrincipals);
+                      }} placeholder="Ad Soyad" />
+                      <button type="button" onClick={() => {
+                          const newPrincipals = formData.principals.filter((_, index) => index !== i);
+                          handleChange('principals', newPrincipals);
+                      }} className="text-red-500 hover:text-red-700 p-2"><Trash2 size={18}/></button>
+                  </div>
+              ))}
+              <button type="button" onClick={() => handleChange('principals', [...formData.principals, ''])} className="text-sm text-blue-600 font-medium flex items-center gap-1"><Plus size={16}/> Müdür Ekle</button>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Müdür Yardımcısı 1</label>
-              <input
-                type="text"
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                value={formData.vicePrincipal1}
-                onChange={(e) => handleChange('vicePrincipal1', e.target.value)}
-                placeholder="Ad Soyad"
-              />
+             <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">Müdür Yardımcıları</label>
+              {formData.vicePrincipals.map((vp, i) => (
+                  <div key={i} className="flex gap-2 mb-2">
+                      <input type="text" className="flex-1 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" value={vp} onChange={(e) => {
+                          const newVicePrincipals = [...formData.vicePrincipals];
+                          newVicePrincipals[i] = e.target.value;
+                          handleChange('vicePrincipals', newVicePrincipals);
+                      }} placeholder="Ad Soyad" />
+                      <button type="button" onClick={() => {
+                          const newVicePrincipals = formData.vicePrincipals.filter((_, index) => index !== i);
+                          handleChange('vicePrincipals', newVicePrincipals);
+                      }} className="text-red-500 hover:text-red-700 p-2"><Trash2 size={18}/></button>
+                  </div>
+              ))}
+              <button type="button" onClick={() => handleChange('vicePrincipals', [...formData.vicePrincipals, ''])} className="text-sm text-blue-600 font-medium flex items-center gap-1"><Plus size={16}/> Müdür Yrd. Ekle</button>
             </div>
-
-            {showExtraAdmins && (
-              <>
-                 <div className="col-span-1 md:col-span-2 border-t border-slate-100 my-2 pt-2">
-                    <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Ekstra Yöneticiler</p>
-                 </div>
-
-                 <div className="animate-fade-in bg-slate-50 p-2 rounded-lg border border-slate-100">
-                    <label className="block text-sm font-medium text-slate-700 mb-1">2. Okul Müdürü (Varsa)</label>
-                    <input
-                      type="text"
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                      value={formData.principalName2 || ''}
-                      onChange={(e) => handleChange('principalName2', e.target.value)}
-                      placeholder="Ad Soyad"
-                    />
-                 </div>
-
-                 <div className="animate-fade-in bg-slate-50 p-2 rounded-lg border border-slate-100">
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Müdür Yardımcısı 2</label>
-                    <input
-                      type="text"
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                      value={formData.vicePrincipal2}
-                      onChange={(e) => handleChange('vicePrincipal2', e.target.value)}
-                      placeholder="Ad Soyad"
-                    />
-                 </div>
-
-                 <div className="animate-fade-in">
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Müdür Yardımcısı 3 (Opsiyonel)</label>
-                  <input
-                    type="text"
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                    value={formData.vicePrincipal3 || ''}
-                    onChange={(e) => handleChange('vicePrincipal3', e.target.value)}
-                    placeholder="Ad Soyad"
-                  />
-                </div>
-                 <div className="animate-fade-in">
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Müdür Yardımcısı 4 (Opsiyonel)</label>
-                  <input
-                    type="text"
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                    value={formData.vicePrincipal4 || ''}
-                    onChange={(e) => handleChange('vicePrincipal4', e.target.value)}
-                    placeholder="Ad Soyad"
-                  />
-                </div>
-              </>
-            )}
           </div>
         </div>
 

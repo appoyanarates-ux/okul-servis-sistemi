@@ -40,7 +40,7 @@ export const PrintableTransportReport: React.FC<{
         .justify-text { text-align: justify; text-justify: inter-word; }
         .break-inside-avoid { page-break-inside: avoid; }
       `}</style>
-      
+
       <div className="text-center font-bold text-base mb-6">
         <p>{settings.educationYear} EĞİTİM ÖĞRETİM YILI</p>
         <p>{settings.province} İLİ {settings.district} İLÇESİ</p>
@@ -64,32 +64,19 @@ export const PrintableTransportReport: React.FC<{
       {/* Signature Block */}
       <div className="mt-16 text-xs font-bold text-center break-inside-avoid">
         {/* Row 1: Admins */}
-        <div className="flex justify-between items-start mb-12 px-4">
-            {settings.vicePrincipal1 && (
-                <div className="flex flex-col gap-1 w-32">
-                    <span>{settings.vicePrincipal1}</span>
-                    <span>Müdür Yrd</span>
-                </div>
-            )}
-            {settings.vicePrincipal2 && (
-                <div className="flex flex-col gap-1 w-32">
-                    <span>{settings.vicePrincipal2}</span>
-                    <span>Müdür Yrd</span>
-                </div>
-            )}
-            {settings.principalName && (
-                <div className="flex flex-col gap-1 w-32">
-                    <span>{settings.principalName}</span>
+        <div className="flex flex-wrap justify-center gap-8 mb-12 px-4">
+            {settings.principals.map((p, i) => (
+                <div key={i} className="flex flex-col gap-1 w-32">
+                    <span>{p}</span>
                     <span>Okul Müdürü</span>
                 </div>
-            )}
-             {/* Extra slot if needed */}
-             {settings.principalName2 && (
-                <div className="flex flex-col gap-1 w-32">
-                    <span>{settings.principalName2}</span>
-                    <span>Okul Müdürü</span>
+            ))}
+            {settings.vicePrincipals.map((vp, i) => (
+                <div key={i} className="flex flex-col gap-1 w-32">
+                    <span>{vp}</span>
+                    <span>Müdür Yardımcısı</span>
                 </div>
-            )}
+            ))}
         </div>
 
         {/* Row 2: O.A.B.B */}
@@ -121,18 +108,18 @@ export const TransportReport: React.FC<TransportReportProps> = ({ students, driv
   useEffect(() => {
     // 1. Calculate stats from current student list
     const stats = new Map<string, { p: number; m: number; total: number }>();
-    
+
     students.forEach(s => {
         if (!s.route) return;
         const route = s.route.trim();
         if (!stats.has(route)) stats.set(route, { p: 0, m: 0, total: 0 });
-        
+
         const entry = stats.get(route)!;
         const grade = parseInt(s.className.replace(/[^0-9]/g, '')) || 0;
-        
+
         if (grade >= 1 && grade <= 4) entry.p++;
         else if (grade >= 5 && grade <= 8) entry.m++;
-        
+
         entry.total++;
     });
 
@@ -146,7 +133,7 @@ export const TransportReport: React.FC<TransportReportProps> = ({ students, driv
 
     // 4. Merge Data and Generate Text
     const mergedData: RouteReportData[] = Array.from(stats.entries()).sort((a,b) => a[0].localeCompare(b[0])).map(([route, counts], index) => {
-        
+
         // --- Smart Data Fetching Logic ---
         // A. Distance: Prefer "Distance Report" value, fallback to "Transport Plan", fallback to 0
         const distFromReport = distanceMap.get(route)?.total;
@@ -158,11 +145,11 @@ export const TransportReport: React.FC<TransportReportProps> = ({ students, driv
         // Clean up features text to flow in sentence (lowercase if not special)
         features = features.replace(/\.$/, ''); // Remove trailing dot
 
-        // C. Capacity: Get from Driver Seat Count (DriversRoutes) or fallback to "......"
-        const assignedDriver = drivers.find(d => d.routes.includes(route)) 
-                               || drivers.find(d => d.name === students.find(s => s.route === route)?.driver);
-        
-        const capacity = assignedDriver?.seatCount ? assignedDriver.seatCount.toString() : "......";
+        // C. Capacity: Get from Transport Planning (vehicleCount * capacity) or fallback to "......"
+        const plan = planData[route];
+        // Calculate total capacity based on student counts if plan data is missing or to ensure it matches
+        const totalCapacity = plan ? (plan.vehicleCount * plan.capacity) : null;
+        const capacity = totalCapacity ? totalCapacity.toString() : "......";
 
         // Generate Default Text dynamically using all sources
         const defaultDesc = `Taşıma merkezine uzaklığı ${distance} km olup güzergah özellikleri; ${features} niteliktedir. Yerleşim yerinde okul bulunmamaktadır. İlkokuldaki ${counts.p} öğrencinin yönetmeliğin 8/b maddesine göre aynı yerleşim yerindeki ${counts.m} ortaokul öğrencisiyle birlikte toplam ${counts.total} öğrencinin ${capacity} koltuk kapasiteli bir araçla belirlenen taşıma merkezine taşınmasına.`;
@@ -179,7 +166,7 @@ export const TransportReport: React.FC<TransportReportProps> = ({ students, driv
     });
 
     setReportData(mergedData);
-    
+
     // Load OABB names
     const savedOabb = localStorage.getItem('okulservis_report_oabb_v1');
     if (savedOabb) {
@@ -194,12 +181,12 @@ export const TransportReport: React.FC<TransportReportProps> = ({ students, driv
   const handleSaveDescription = (id: string, newDesc: string) => {
       setReportData(prev => {
           const newData = prev.map(item => item.id === id ? { ...item, description: newDesc } : item);
-          
+
           // Save to LocalStorage
           const descMap: Record<string, string> = {};
           newData.forEach(d => descMap[d.id] = d.description);
           localStorage.setItem('okulservis_report_descriptions_v1', JSON.stringify(descMap));
-          
+
           return newData;
       });
   };
@@ -218,17 +205,17 @@ export const TransportReport: React.FC<TransportReportProps> = ({ students, driv
       const distFromReport = distanceMap.get(item.route)?.total;
       const distFromPlan = planData[item.route]?.distance;
       const distance = distFromReport || distFromPlan || 0;
-      
+
       let features = distanceMap.get(item.route)?.features || "yolu asfalt";
       features = features.replace(/\.$/, '');
 
-      // Recalculate capacity from drivers
-      const assignedDriver = drivers.find(d => d.routes.includes(item.route)) 
-                             || drivers.find(d => d.name === students.find(s => s.route === item.route)?.driver);
-      const capacity = assignedDriver?.seatCount ? assignedDriver.seatCount.toString() : "......";
+      // Recalculate capacity from Transport Planning
+      const plan = planData[item.route];
+      const totalCapacity = plan ? (plan.vehicleCount * plan.capacity) : null;
+      const capacity = totalCapacity ? totalCapacity.toString() : "......";
 
       const defaultDesc = `Taşıma merkezine uzaklığı ${distance} km olup güzergah özellikleri; ${features} niteliktedir. Yerleşim yerinde okul bulunmamaktadır. İlkokuldaki ${item.primaryCount} öğrencinin yönetmeliğin 8/b maddesine göre aynı yerleşim yerindeki ${item.middleCount} ortaokul öğrencisiyle birlikte toplam ${item.totalCount} öğrencinin ${capacity} koltuk kapasiteli bir araçla belirlenen taşıma merkezine taşınmasına.`;
-      
+
       if(confirm("Metni diğer sayfalardaki (Mesafe, Şoför/Koltuk, Planlama) güncel verilere göre sıfırlamak istediğinize emin misiniz?")) {
           handleSaveDescription(item.id, defaultDesc);
       }
@@ -237,7 +224,7 @@ export const TransportReport: React.FC<TransportReportProps> = ({ students, driv
   const handleDownloadPDF = () => {
     if (!hiddenPrintRef.current) return;
     setIsDownloading(true);
-    
+
     const element = hiddenPrintRef.current;
     const opt = {
       margin: 20,
@@ -258,14 +245,14 @@ export const TransportReport: React.FC<TransportReportProps> = ({ students, driv
   return (
     <div className="space-y-6">
       {isPreviewing && (
-        <PrintPreview 
-          title="Taşımalı Eğitim Raporu" 
+        <PrintPreview
+          title="Taşımalı Eğitim Raporu"
           onBack={() => setIsPreviewing(false)}
           orientation={orientation}
         >
-          <PrintableTransportReport 
-            reportData={reportData} 
-            settings={settings} 
+          <PrintableTransportReport
+            reportData={reportData}
+            settings={settings}
             oabbPrimary={oabbPrimary}
             oabbMiddle={oabbMiddle}
             orientation={orientation}
@@ -276,12 +263,12 @@ export const TransportReport: React.FC<TransportReportProps> = ({ students, driv
       {/* Hidden for PDF generation */}
       <div className="hidden">
           <div ref={hiddenPrintRef}>
-            <PrintableTransportReport 
-                reportData={reportData} 
-                settings={settings} 
+            <PrintableTransportReport
+                reportData={reportData}
+                settings={settings}
                 oabbPrimary={oabbPrimary}
                 oabbMiddle={oabbMiddle}
-                orientation={orientation} 
+                orientation={orientation}
             />
           </div>
       </div>
@@ -292,7 +279,7 @@ export const TransportReport: React.FC<TransportReportProps> = ({ students, driv
           <h1 className="text-2xl font-bold text-slate-800">Taşımalı Eğitim Raporu</h1>
           <p className="text-slate-500 text-sm">Yönetmelik gereği oluşturulan taşıma karar raporu. Veriler diğer modüllerden otomatik çekilir.</p>
         </div>
-        
+
         <div className="flex flex-wrap items-center gap-2">
             <div className="flex items-center bg-white border border-slate-200 rounded-lg p-1 mr-2">
                 <button onClick={() => setOrientation('portrait')} className={`px-2 py-1.5 rounded text-xs font-medium flex items-center gap-1 transition-colors ${orientation === 'portrait' ? 'bg-blue-100 text-blue-700' : 'text-slate-500 hover:bg-slate-50'}`}><FileText size={14} /></button>
@@ -332,12 +319,12 @@ export const TransportReport: React.FC<TransportReportProps> = ({ students, driv
                   </div>
                   <div className="p-4">
                       <div className="relative">
-                          <textarea 
+                          <textarea
                             className="w-full p-3 border border-slate-300 rounded-lg text-sm leading-relaxed focus:ring-2 focus:ring-blue-500 outline-none min-h-[100px]"
                             value={item.description}
                             onChange={(e) => handleSaveDescription(item.id, e.target.value)}
                           />
-                          <button 
+                          <button
                             onClick={() => handleResetText(item)}
                             className="absolute top-2 right-2 p-1.5 text-slate-400 hover:text-blue-600 bg-white border border-slate-200 rounded shadow-sm transition-colors"
                             title="Güncel Verilerle Sıfırla"

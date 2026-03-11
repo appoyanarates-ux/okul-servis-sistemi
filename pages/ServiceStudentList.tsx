@@ -20,10 +20,10 @@ export const PrintableServiceList: React.FC<{
   settings: AppSettings;
   orientation?: 'portrait' | 'landscape';
 }> = ({ students, driver, settings, orientation = 'portrait' }) => {
-  
+
   // Adjusted to 25 rows to ensure signature block fits on one page
   const displayRows = useMemo(() => {
-      const minRows = 25; 
+      const minRows = 25;
       const emptyRowsCount = Math.max(0, minRows - students.length);
       return { data: students, emptyCount: emptyRowsCount };
   }, [students]);
@@ -39,7 +39,7 @@ export const PrintableServiceList: React.FC<{
         .break-inside-avoid { page-break-inside: avoid; }
         .print-header-cell { background-color: #f3f4f6 !important; font-weight: bold; text-align: center; }
       `}</style>
-      
+
       {/* HEADER TABLE */}
       <table className="w-full text-xs mb-0 border-black">
           <tbody>
@@ -133,24 +133,15 @@ export const PrintableServiceList: React.FC<{
 
           {/* Right Side Signatures (Principals) */}
           <div className="flex gap-8">
-              {settings.principalName && (
-                  <div className="flex flex-col gap-8 min-w-[120px]">
+              {settings.principals.map((p, i) => (
+                  <div key={i} className="flex flex-col gap-8 min-w-[120px]">
                       <div>&nbsp;</div>
                       <div>
-                          {settings.principalName}<br/>
+                          {p}<br/>
                           <span className="font-normal">Okul Müdürü</span>
                       </div>
                   </div>
-              )}
-              {settings.principalName2 && (
-                  <div className="flex flex-col gap-8 min-w-[120px]">
-                      <div>&nbsp;</div>
-                      <div>
-                          {settings.principalName2}<br/>
-                          <span className="font-normal">Okul Müdürü</span>
-                      </div>
-                  </div>
-              )}
+              ))}
           </div>
       </div>
     </div>
@@ -167,7 +158,7 @@ export const ServiceStudentList: React.FC<ServiceStudentListProps> = ({ students
 
   // Filter Data
   const selectedDriver = useMemo(() => drivers.find(d => d.id === selectedDriverId), [drivers, selectedDriverId]);
-  
+
   const filteredStudents = useMemo(() => {
       if (!selectedDriver) return [];
       return students
@@ -188,7 +179,7 @@ export const ServiceStudentList: React.FC<ServiceStudentListProps> = ({ students
   const handleDownloadPDF = () => {
     if (!selectedDriver || !hiddenPrintRef.current) return alert("Lütfen şoför seçiniz.");
     setIsDownloading(true);
-    
+
     const element = hiddenPrintRef.current;
     const opt = {
       margin: 5,
@@ -209,16 +200,16 @@ export const ServiceStudentList: React.FC<ServiceStudentListProps> = ({ students
   return (
     <div className="space-y-6">
       {isPreviewing && (
-        <PrintPreview 
-          title="Servis Öğrenci Listesi" 
+        <PrintPreview
+          title="Servis Öğrenci Listesi"
           onBack={() => setIsPreviewing(false)}
           orientation={orientation}
         >
-          <PrintableServiceList 
-            students={filteredStudents} 
+          <PrintableServiceList
+            students={filteredStudents}
             driver={selectedDriver}
             settings={settings}
-            orientation={orientation} 
+            orientation={orientation}
           />
         </PrintPreview>
       )}
@@ -226,11 +217,11 @@ export const ServiceStudentList: React.FC<ServiceStudentListProps> = ({ students
       {/* Hidden for PDF generation */}
       <div className="hidden">
           <div ref={hiddenPrintRef}>
-            <PrintableServiceList 
-                students={filteredStudents} 
+            <PrintableServiceList
+                students={filteredStudents}
                 driver={selectedDriver}
                 settings={settings}
-                orientation={orientation} 
+                orientation={orientation}
             />
           </div>
       </div>
@@ -241,13 +232,13 @@ export const ServiceStudentList: React.FC<ServiceStudentListProps> = ({ students
           <h1 className="text-2xl font-bold text-slate-800">Servis Öğrenci Listeleri</h1>
           <p className="text-slate-500 text-sm">Şoförlere verilecek öğrenci iletişim listelerini yönetin ve yazdırın.</p>
         </div>
-        
+
         <div className="flex flex-wrap items-center gap-2">
             <div className="flex items-center bg-white border border-slate-200 rounded-lg p-1 mr-2">
                 <button onClick={() => setOrientation('portrait')} className={`px-2 py-1.5 rounded text-xs font-medium flex items-center gap-1 transition-colors ${orientation === 'portrait' ? 'bg-blue-100 text-blue-700' : 'text-slate-500 hover:bg-slate-50'}`}><FileText size={14} /></button>
                 <button onClick={() => setOrientation('landscape')} className={`px-2 py-1.5 rounded text-xs font-medium flex items-center gap-1 transition-colors ${orientation === 'landscape' ? 'bg-blue-100 text-blue-700' : 'text-slate-500 hover:bg-slate-50'}`}><ArrowRightLeft size={14} /></button>
             </div>
-            
+
             <button onClick={() => setIsPreviewing(true)} disabled={!selectedDriver} className="flex items-center space-x-2 bg-violet-50 text-violet-700 hover:bg-violet-100 px-3 py-2 rounded-lg transition-colors font-medium border border-violet-200 disabled:opacity-50 shadow-sm"><Eye size={16} /><span className="hidden sm:inline">Önizle</span></button>
             <button onClick={handleDownloadPDF} disabled={!selectedDriver || isDownloading} className="flex items-center space-x-2 bg-red-50 text-red-700 hover:bg-red-100 px-3 py-2 rounded-lg transition-colors font-medium border border-red-200 disabled:opacity-50 shadow-sm"><Download size={16} /><span className="hidden sm:inline">{isDownloading ? '...' : 'PDF İndir'}</span></button>
         </div>
@@ -255,7 +246,7 @@ export const ServiceStudentList: React.FC<ServiceStudentListProps> = ({ students
 
       {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          
+
           {/* Left Sidebar: Driver Selection */}
           <div className="lg:col-span-1 flex flex-col gap-4">
               <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col h-[600px]">
@@ -341,7 +332,7 @@ export const ServiceStudentList: React.FC<ServiceStudentListProps> = ({ students
                           <div className="text-right hidden sm:block">
                               <div className="text-xs text-blue-200 mb-1">Güzergah Bilgisi</div>
                               <div className="font-medium text-sm bg-blue-700 px-3 py-1 rounded-lg inline-block">
-                                  {selectedDriver.routes.length > 0 ? selectedDriver.routes[0] : 'Tanımsız'} 
+                                  {selectedDriver.routes.length > 0 ? selectedDriver.routes[0] : 'Tanımsız'}
                                   {selectedDriver.routes.length > 1 && ` +${selectedDriver.routes.length - 1} diğer`}
                               </div>
                           </div>
