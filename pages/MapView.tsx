@@ -191,11 +191,13 @@ export const MapView: React.FC<MapViewProps> = ({ students, drivers, onUpdateStu
   };
 
   // Auto-resolve village location
-  const resolveVillageLocation = async (villageName: string) => {
-      if (!villageName) return;
+  const resolveVillageLocation = async (villageName: string): Promise<{lat: number, lng: number} | null> => {
+      if (!villageName) return null;
 
       // Check if already exists
-      if (settings.villageLocations && settings.villageLocations[villageName]) return;
+      if (settings.villageLocations && settings.villageLocations[villageName]) {
+          return settings.villageLocations[villageName];
+      }
 
       try {
           let query = villageName;
@@ -203,27 +205,24 @@ export const MapView: React.FC<MapViewProps> = ({ students, drivers, onUpdateStu
               query = `${villageName}, ${settings.district}, ${settings.province}`;
           }
 
-          // Add country for better precision
-          query += ", Turkey";
+          let response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`);
+          let data = await response.json();
 
-          const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`);
-          const data = await response.json();
+          // If no results, try without district/province
+          if ((!data || data.length === 0) && (settings.district || settings.province)) {
+               response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(villageName)}`);
+               data = await response.json();
+          }
 
           if (data && data.length > 0) {
               const lat = parseFloat(data[0].lat);
               const lng = parseFloat(data[0].lon);
-
-              onUpdateSettings({
-                  ...settings,
-                  villageLocations: {
-                      ...(settings.villageLocations || {}),
-                      [villageName]: { lat, lng }
-                  }
-              });
+              return { lat, lng };
           }
       } catch (e) {
           console.error("Auto-resolve failed", e);
       }
+      return null;
   };
 
   // Effect to auto-resolve selected student's village
@@ -231,10 +230,51 @@ export const MapView: React.FC<MapViewProps> = ({ students, drivers, onUpdateStu
       if (viewMode === 'student' && selectedStudentId) {
           const student = students.find(s => s.id === selectedStudentId);
           if (student && student.village) {
-               resolveVillageLocation(student.village);
+               resolveVillageLocation(student.village).then(loc => {
+                   if (loc && (!settings.villageLocations || !settings.villageLocations[student.village])) {
+                       onUpdateSettings({
+                           ...settings,
+                           villageLocations: {
+                               ...(settings.villageLocations || {}),
+                               [student.village]: loc
+                           }
+                       });
+                   }
+               });
           }
+      } else if (viewMode === 'driver' && selectedDriver) {
+          const driverStudents = students.filter(s => s.driver === selectedDriver);
+          const uniqueVillages = Array.from(new Set(driverStudents.map(s => s.village).filter(Boolean))) as string[];
+
+          // Resolve one by one with a small delay to avoid rate limits
+          const resolveSequentially = async () => {
+              let newLocations: Record<string, {lat: number, lng: number}> = {};
+              let hasNew = false;
+
+              for (const village of uniqueVillages) {
+                  if (!settings.villageLocations || !settings.villageLocations[village]) {
+                      const loc = await resolveVillageLocation(village);
+                      if (loc) {
+                          newLocations[village] = loc;
+                          hasNew = true;
+                      }
+                      await new Promise(r => setTimeout(r, 1100)); // 1.1s delay for Nominatim
+                  }
+              }
+
+              if (hasNew) {
+                  onUpdateSettings({
+                      ...settings,
+                      villageLocations: {
+                          ...(settings.villageLocations || {}),
+                          ...newLocations
+                      }
+                  });
+              }
+          };
+          resolveSequentially();
       }
-  }, [selectedStudentId, viewMode, students, settings.villageLocations]);
+  }, [selectedStudentId, selectedDriver, viewMode, students, settings.villageLocations]);
 
   const studentMarkers = useMemo(() => {
       // If student mode, only show the selected student

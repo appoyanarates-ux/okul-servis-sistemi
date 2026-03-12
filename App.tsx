@@ -171,7 +171,7 @@ export default function App() {
     <HashRouter>
       <Layout>
         <Routes>
-          <Route path="/" element={<Dashboard students={students} settings={settings} />} />
+          <Route path="/" element={<Dashboard students={students} drivers={drivers} setStudents={setStudents} setDrivers={setDrivers} settings={settings} />} />
           <Route
             path="/students"
             element={

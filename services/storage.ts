@@ -1,5 +1,5 @@
 
-import { Student, Driver, AppSettings } from '../types';
+import { Student, Driver, AppSettings, SavedPlanning } from '../types';
 import { INITIAL_STUDENTS, INITIAL_DRIVERS, INITIAL_SETTINGS } from './mockData';
 
 const KEYS = {
@@ -7,7 +7,8 @@ const KEYS = {
   DRIVERS: 'okulservis_drivers_v1',
   SETTINGS: 'okulservis_settings_v1',
   TRANSPORT_PLAN: 'okulservis_transport_plan_v1',
-  DISTANCE_REPORT: 'okulservis_distance_report_v1'
+  DISTANCE_REPORT: 'okulservis_distance_report_v1',
+  SAVED_PLANNINGS: 'okulservis_saved_plannings_v1'
 };
 
 export const loadStudents = (): Student[] => {
@@ -98,5 +99,23 @@ export const saveDistanceReportData = (data: any[]) => {
     localStorage.setItem(KEYS.DISTANCE_REPORT, JSON.stringify(data));
   } catch (error) {
     console.error("Mesafe raporu kaydedilemedi", error);
+  }
+};
+
+export const loadSavedPlannings = (): SavedPlanning[] => {
+  try {
+    const data = localStorage.getItem(KEYS.SAVED_PLANNINGS);
+    return data ? JSON.parse(data) : [];
+  } catch (error) {
+    console.error("Kayıtlı planlamalar yüklenirken hata oluştu:", error);
+    return [];
+  }
+};
+
+export const saveSavedPlannings = (plannings: SavedPlanning[]) => {
+  try {
+    localStorage.setItem(KEYS.SAVED_PLANNINGS, JSON.stringify(plannings));
+  } catch (error) {
+    console.error("Kayıtlı planlamalar kaydedilirken hata oluştu:", error);
   }
 };

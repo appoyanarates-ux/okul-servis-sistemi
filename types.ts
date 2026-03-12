@@ -51,6 +51,14 @@ export interface AppSettings {
   quickVillages?: string[];
 }
 
+export interface SavedPlanning {
+  id: string;
+  name: string;
+  createdAt: string;
+  students: Student[];
+  drivers: Driver[];
+}
+
 export interface AppState {
   students: Student[];
   drivers: Driver[];

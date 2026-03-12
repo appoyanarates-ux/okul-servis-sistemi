@@ -1,33 +1,94 @@
 
-import React, { useMemo, useState } from 'react';
-import { Student, AppSettings } from '../types';
-import { Users, Bus, MapPin, School, TrendingUp, Upload as UploadIcon, Sparkles, FileText, Loader2, Route as RouteIcon, PieChart, Key, ArrowRight, AlertTriangle, CheckCircle, Info } from 'lucide-react';
+import React, { useMemo, useState, useEffect } from 'react';
+import { Student, AppSettings, Driver, SavedPlanning } from '../types';
+import { Users, Bus, MapPin, School, TrendingUp, Upload as UploadIcon, Sparkles, FileText, Loader2, Route as RouteIcon, PieChart, Key, ArrowRight, AlertTriangle, CheckCircle, Info, Save, Trash2, Edit2, Play } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { useNavigate, Link } from 'react-router-dom';
 import { analyzeTransportData, AnalysisMode } from '../services/geminiService';
+import { loadSavedPlannings, saveSavedPlannings } from '../services/storage';
 
 interface DashboardProps {
   students: Student[];
+  drivers: Driver[];
+  setStudents: React.Dispatch<React.SetStateAction<Student[]>>;
+  setDrivers: React.Dispatch<React.SetStateAction<Driver[]>>;
   settings: AppSettings;
 }
 
-export const Dashboard: React.FC<DashboardProps> = ({ students, settings }) => {
+export const Dashboard: React.FC<DashboardProps> = ({ students, drivers, setStudents, setDrivers, settings }) => {
   const navigate = useNavigate();
   const [aiSummary, setAiSummary] = useState('');
   const [loadingAi, setLoadingAi] = useState(false);
   const [analysisType, setAnalysisType] = useState<AnalysisMode>('general');
-  
+
+  // Saved Plannings State
+  const [savedPlannings, setSavedPlannings] = useState<SavedPlanning[]>([]);
+  const [showSaveModal, setShowSaveModal] = useState(false);
+  const [newPlanName, setNewPlanName] = useState('');
+  const [editingPlanId, setEditingPlanId] = useState<string | null>(null);
+
+  useEffect(() => {
+    setSavedPlannings(loadSavedPlannings());
+  }, []);
+
+  const handleSavePlanning = () => {
+    if (!newPlanName.trim()) return;
+
+    let updatedPlannings;
+    if (editingPlanId) {
+      updatedPlannings = savedPlannings.map(p =>
+        p.id === editingPlanId ? { ...p, name: newPlanName.trim() } : p
+      );
+    } else {
+      const newPlan: SavedPlanning = {
+        id: `plan-${Date.now()}`,
+        name: newPlanName.trim(),
+        createdAt: new Date().toISOString(),
+        students: JSON.parse(JSON.stringify(students)),
+        drivers: JSON.parse(JSON.stringify(drivers))
+      };
+      updatedPlannings = [...savedPlannings, newPlan];
+    }
+
+    setSavedPlannings(updatedPlannings);
+    saveSavedPlannings(updatedPlannings);
+    setShowSaveModal(false);
+    setNewPlanName('');
+    setEditingPlanId(null);
+  };
+
+  const handleDeletePlanning = (id: string) => {
+    if (window.confirm('Bu planlamayı silmek istediğinize emin misiniz?')) {
+      const updatedPlannings = savedPlannings.filter(p => p.id !== id);
+      setSavedPlannings(updatedPlannings);
+      saveSavedPlannings(updatedPlannings);
+    }
+  };
+
+  const handleLoadPlanning = (plan: SavedPlanning) => {
+    if (window.confirm(`"${plan.name}" planlamasını yüklemek istediğinize emin misiniz? Mevcut kaydedilmemiş değişiklikleriniz kaybolacaktır.`)) {
+      setStudents(plan.students);
+      setDrivers(plan.drivers);
+    }
+  };
+
+  const openEditModal = (plan: SavedPlanning) => {
+    setEditingPlanId(plan.id);
+    setNewPlanName(plan.name);
+    setShowSaveModal(true);
+  };
+
   const stats = useMemo(() => {
     const uniqueDrivers = new Set(students.map(s => s.driver)).size;
     const uniqueRoutes = new Set(students.map(s => s.route)).size;
     const uniqueVillages = new Set(students.map(s => s.village)).size;
-    
+
     // Class distribution for chart
     const classCount: Record<string, number> = {};
     students.forEach(s => {
       classCount[s.className] = (classCount[s.className] || 0) + 1;
     });
-    
+
     const chartData = Object.keys(classCount).map(key => ({
       name: key,
       students: classCount[key]
@@ -45,7 +106,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ students, settings }) => {
   // Route Efficiency Analysis Data
   const routeMetrics = useMemo(() => {
       const map = new Map<string, { count: number; driver: string; villages: Set<string> }>();
-      
+
       students.forEach(s => {
           const rName = s.route || 'Tanımsız Güzergah';
           if (!map.has(rName)) {
@@ -102,8 +163,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ students, settings }) => {
   };
 
   const StatCard = ({ icon, label, value, color, link, state }: any) => (
-    <Link 
-      to={link} 
+    <Link
+      to={link}
       state={state}
       className="bg-white rounded-xl shadow-sm p-6 border border-slate-100 flex items-center justify-between hover:shadow-lg hover:-translate-y-1 transition-all duration-300 group cursor-pointer"
     >
@@ -150,16 +211,16 @@ export const Dashboard: React.FC<DashboardProps> = ({ students, settings }) => {
                  </Link>
               )}
             </div>
-            
+
             <div className="flex flex-wrap gap-3 bg-black/20 p-2 rounded-xl backdrop-blur-md border border-white/10">
-               <button 
+               <button
                  onClick={() => setAnalysisType('general')}
                  className={`px-4 py-2.5 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${analysisType === 'general' ? 'bg-white text-violet-900 shadow-lg' : 'text-white/80 hover:bg-white/10'}`}
                >
                  <PieChart size={18} />
                  Genel Özet
                </button>
-               <button 
+               <button
                  onClick={() => setAnalysisType('routes')}
                  className={`px-4 py-2.5 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${analysisType === 'routes' ? 'bg-white text-violet-900 shadow-lg' : 'text-white/80 hover:bg-white/10'}`}
                >
@@ -222,10 +283,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ students, settings }) => {
               <div className="flex flex-col h-full">
                   <div className="flex justify-between items-center mb-3">
                       <h3 className="text-sm font-bold text-yellow-100 flex items-center gap-2">
-                          <Sparkles size={16} /> 
+                          <Sparkles size={16} />
                           {analysisType === 'routes' ? 'AI Optimizasyon Önerileri' : 'Yapay Zeka Raporu'}
                       </h3>
-                      <button 
+                      <button
                         onClick={handleGenerateReport}
                         disabled={loadingAi}
                         className="bg-white text-violet-900 px-4 py-1.5 rounded-lg text-xs font-bold hover:bg-blue-50 transition-colors disabled:opacity-70 flex items-center gap-2 shadow-sm"
@@ -234,7 +295,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ students, settings }) => {
                         {aiSummary ? 'Yeniden Analiz Et' : 'Analizi Başlat'}
                       </button>
                   </div>
-                  
+
                   <div className="flex-1 bg-black/20 rounded-xl border border-white/10 p-4 min-h-[300px] max-h-[400px] overflow-y-auto custom-scrollbar relative">
                       {loadingAi ? (
                           <div className="absolute inset-0 flex flex-col items-center justify-center text-white/50">
@@ -268,7 +329,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ students, settings }) => {
               </div>
           </div>
         </div>
-        
+
         {/* Background Decorative Elements */}
         <div className="absolute top-0 right-0 -mt-20 -mr-20 w-80 h-80 bg-white/5 rounded-full blur-3xl pointer-events-none"></div>
         <div className="absolute bottom-0 left-0 -mb-20 -ml-20 w-60 h-60 bg-blue-500/10 rounded-full blur-3xl pointer-events-none"></div>
@@ -276,33 +337,33 @@ export const Dashboard: React.FC<DashboardProps> = ({ students, settings }) => {
 
       {/* Stats Grid - Clickable */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard 
-          icon={<Users size={24} />} 
-          label="Toplam Öğrenci" 
-          value={stats.totalStudents} 
+        <StatCard
+          icon={<Users size={24} />}
+          label="Toplam Öğrenci"
+          value={stats.totalStudents}
           color="bg-blue-500"
           link="/students"
         />
-        <StatCard 
-          icon={<Bus size={24} />} 
-          label="Aktif Şoförler" 
-          value={stats.drivers} 
+        <StatCard
+          icon={<Bus size={24} />}
+          label="Aktif Şoförler"
+          value={stats.drivers}
           color="bg-emerald-500"
           link="/drivers"
           state={{ activeTab: 'drivers' }}
         />
-        <StatCard 
-          icon={<MapPin size={24} />} 
-          label="Güzergah Sayısı" 
-          value={stats.routes} 
+        <StatCard
+          icon={<MapPin size={24} />}
+          label="Güzergah Sayısı"
+          value={stats.routes}
           color="bg-indigo-500"
           link="/drivers"
           state={{ activeTab: 'routes' }}
         />
-        <StatCard 
-          icon={<School size={24} />} 
-          label="Hizmet Verilen Köy" 
-          value={stats.villages} 
+        <StatCard
+          icon={<School size={24} />}
+          label="Hizmet Verilen Köy"
+          value={stats.villages}
           color="bg-orange-500"
           link="/map"
         />
@@ -324,7 +385,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ students, settings }) => {
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#64748b'}} dy={10} />
                 <YAxis axisLine={false} tickLine={false} tick={{fill: '#64748b'}} />
-                <Tooltip 
+                <Tooltip
                   cursor={{fill: '#f1f5f9'}}
                   contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}}
                 />
@@ -338,30 +399,123 @@ export const Dashboard: React.FC<DashboardProps> = ({ students, settings }) => {
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
-           <h3 className="font-semibold text-slate-800 mb-4">Hızlı İşlemler</h3>
-           <div className="space-y-3">
-             <button 
-                onClick={() => navigate('/students', { state: { action: 'add' } })}
-                className="w-full text-left px-4 py-3 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 font-medium transition-colors border border-slate-200 flex items-center justify-between group">
-                <span>Yeni Öğrenci Ekle</span>
-                <span className="text-slate-400 group-hover:text-blue-500">+</span>
-             </button>
-             <button 
-                onClick={() => navigate('/drivers', { state: { action: 'add-route' } })}
-                className="w-full text-left px-4 py-3 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 font-medium transition-colors border border-slate-200 flex items-center justify-between group">
-                <span>Yeni Güzergah Tanımla</span>
-                <span className="text-slate-400 group-hover:text-blue-500">+</span>
-             </button>
-             <button 
-                onClick={() => navigate('/planning')}
-                className="w-full text-left px-4 py-3 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 font-medium transition-colors border border-slate-200 flex items-center justify-between group">
-                <span>Rapor İndir</span>
-                <UploadIcon size={16} className="text-slate-400 group-hover:text-blue-500" />
-             </button>
-           </div>
+        <div className="space-y-6">
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
+               <h3 className="font-semibold text-slate-800 mb-4">Hızlı İşlemler</h3>
+               <div className="space-y-3">
+                 <button
+                    onClick={() => navigate('/students', { state: { action: 'add' } })}
+                    className="w-full text-left px-4 py-3 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 font-medium transition-colors border border-slate-200 flex items-center justify-between group">
+                    <span>Yeni Öğrenci Ekle</span>
+                    <span className="text-slate-400 group-hover:text-blue-500">+</span>
+                 </button>
+                 <button
+                    onClick={() => navigate('/drivers', { state: { action: 'add-route' } })}
+                    className="w-full text-left px-4 py-3 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 font-medium transition-colors border border-slate-200 flex items-center justify-between group">
+                    <span>Yeni Güzergah Tanımla</span>
+                    <span className="text-slate-400 group-hover:text-blue-500">+</span>
+                 </button>
+                 <button
+                    onClick={() => navigate('/planning')}
+                    className="w-full text-left px-4 py-3 rounded-lg bg-slate-50 hover:bg-slate-100 text-slate-700 font-medium transition-colors border border-slate-200 flex items-center justify-between group">
+                    <span>Rapor İndir</span>
+                    <UploadIcon size={16} className="text-slate-400 group-hover:text-blue-500" />
+                 </button>
+               </div>
+            </div>
+
+            <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
+               <div className="flex items-center justify-between mb-4">
+                   <h3 className="font-semibold text-slate-800 flex items-center gap-2">
+                       <Save size={18} className="text-indigo-500" />
+                       Kayıtlı Planlamalar
+                   </h3>
+                   <button
+                       onClick={() => { setEditingPlanId(null); setNewPlanName(''); setShowSaveModal(true); }}
+                       className="text-xs bg-indigo-50 text-indigo-600 hover:bg-indigo-100 px-2 py-1 rounded font-medium transition-colors"
+                   >
+                       Mevcut Durumu Kaydet
+                   </button>
+               </div>
+
+               {savedPlannings.length === 0 ? (
+                   <div className="text-center py-6 text-slate-400 text-sm bg-slate-50 rounded-lg border border-slate-100 border-dashed">
+                       Henüz kaydedilmiş bir planlama yok.
+                   </div>
+               ) : (
+                   <div className="space-y-2 max-h-[200px] overflow-y-auto custom-scrollbar pr-1">
+                       {savedPlannings.map(plan => (
+                           <div key={plan.id} className="flex items-center justify-between p-3 bg-slate-50 border border-slate-200 rounded-lg hover:border-indigo-300 transition-colors group">
+                               <div className="min-w-0 flex-1">
+                                   <div className="font-medium text-slate-800 text-sm truncate" title={plan.name}>{plan.name}</div>
+                                   <div className="text-[10px] text-slate-500 mt-0.5">
+                                       {new Date(plan.createdAt).toLocaleDateString('tr-TR')} • {plan.students.length} Öğrenci
+                                   </div>
+                               </div>
+                               <div className="flex items-center gap-1 ml-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                   <button onClick={() => handleLoadPlanning(plan)} title="Bu planlamayı yükle" className="p-1.5 text-blue-600 hover:bg-blue-100 rounded-md transition-colors">
+                                       <Play size={14} />
+                                   </button>
+                                   <button onClick={() => openEditModal(plan)} title="İsmi düzenle" className="p-1.5 text-slate-600 hover:bg-slate-200 rounded-md transition-colors">
+                                       <Edit2 size={14} />
+                                   </button>
+                                   <button onClick={() => handleDeletePlanning(plan.id)} title="Sil" className="p-1.5 text-red-600 hover:bg-red-100 rounded-md transition-colors">
+                                       <Trash2 size={14} />
+                                   </button>
+                               </div>
+                           </div>
+                       ))}
+                   </div>
+               )}
+            </div>
         </div>
       </div>
+
+      {/* Save Planning Modal */}
+      {showSaveModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
+              <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
+                  <div className="p-6">
+                      <h3 className="text-lg font-bold text-slate-800 mb-2">
+                          {editingPlanId ? 'Planlama Adını Düzenle' : 'Mevcut Planlamayı Kaydet'}
+                      </h3>
+                      <p className="text-sm text-slate-500 mb-4">
+                          {editingPlanId
+                              ? 'Bu planlamanın ismini güncelleyebilirsiniz.'
+                              : 'Şu anki öğrenci ve şoför eşleştirmelerini bir planlama olarak kaydederek daha sonra tekrar yükleyebilirsiniz.'}
+                      </p>
+
+                      <div className="space-y-1">
+                          <label className="text-sm font-medium text-slate-700">Planlama Adı</label>
+                          <input
+                              type="text"
+                              value={newPlanName}
+                              onChange={(e) => setNewPlanName(e.target.value)}
+                              placeholder="Örn: Alternatif Güzergah Planı 1"
+                              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
+                              autoFocus
+                              onKeyDown={(e) => e.key === 'Enter' && handleSavePlanning()}
+                          />
+                      </div>
+                  </div>
+                  <div className="p-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
+                      <button
+                          onClick={() => { setShowSaveModal(false); setNewPlanName(''); setEditingPlanId(null); }}
+                          className="px-4 py-2 text-slate-600 font-medium hover:bg-slate-200 rounded-lg transition-colors"
+                      >
+                          İptal
+                      </button>
+                      <button
+                          onClick={handleSavePlanning}
+                          disabled={!newPlanName.trim()}
+                          className="px-4 py-2 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
+                      >
+                          Kaydet
+                      </button>
+                  </div>
+              </div>
+          </div>
+      )}
     </div>
   );
 };
