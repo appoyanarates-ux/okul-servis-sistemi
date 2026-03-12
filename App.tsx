@@ -42,13 +42,18 @@ export default function App() {
   }, [settings]);
 
   const handleUploadData = (newStudents: Student[], mode: 'merge' | 'replace') => {
-    // Extract unique villages from new students
+    // Extract unique villages and classes from new students
     const newVillages = Array.from(new Set(newStudents.map(s => s.village).filter(Boolean)));
+    const newClasses = Array.from(new Set(newStudents.map(s => s.className).filter(Boolean)));
 
     setSettings(prev => {
         const existingVillages = prev.quickVillages || [];
         const combinedVillages = Array.from(new Set([...existingVillages, ...newVillages])).sort();
-        return { ...prev, quickVillages: combinedVillages };
+
+        const existingClasses = prev.quickClasses || [];
+        const combinedClasses = Array.from(new Set([...existingClasses, ...newClasses])).sort();
+
+        return { ...prev, quickVillages: combinedVillages, quickClasses: combinedClasses };
     });
 
     if (mode === 'replace') {

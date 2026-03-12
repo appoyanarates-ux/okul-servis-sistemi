@@ -93,7 +93,9 @@ export const Students: React.FC<StudentsProps> = ({ students, drivers, onDelete,
   const [isPreviewing, setIsPreviewing] = useState(false);
   const [isBatchMoveModalOpen, setIsBatchMoveModalOpen] = useState(false);
   const [isGraduateModalOpen, setIsGraduateModalOpen] = useState(false);
+  const [isClearGradeModalOpen, setIsClearGradeModalOpen] = useState(false);
   const [graduateGrade, setGraduateGrade] = useState('8');
+  const [clearGrade, setClearGrade] = useState('1');
   const [targetClassName, setTargetClassName] = useState('');
   const [orientation, setOrientation] = useState<'portrait' | 'landscape'>('portrait');
   const [isDownloading, setIsDownloading] = useState(false);
@@ -126,14 +128,25 @@ export const Students: React.FC<StudentsProps> = ({ students, drivers, onDelete,
   }, [students]);
 
   // Extract unique values for filters and autocomplete
-  const uniqueClasses = useMemo(() => Array.from(new Set(students.map(s => s.className).filter(Boolean))).sort(), [students]);
+  const uniqueClasses = useMemo(() => {
+    const classes = new Set(students.map(s => s.className).filter(Boolean));
+    if (settings.quickClasses) settings.quickClasses.forEach(c => classes.add(c));
+    return Array.from(classes).sort();
+  }, [students, settings.quickClasses]);
+
   const uniqueRoutes = useMemo(() => {
       const routes = new Set(students.map(s => s.route).filter(Boolean));
       // Add routes from drivers prop as well
       drivers.forEach(d => d.routes.forEach(r => routes.add(r)));
       return Array.from(routes).sort();
   }, [students, drivers]);
-  const uniqueVillages = useMemo(() => Array.from(new Set(students.map(s => s.village).filter(Boolean))).sort(), [students]);
+
+  const uniqueVillages = useMemo(() => {
+    const villages = new Set(students.map(s => s.village).filter(Boolean));
+    if (settings.quickVillages) settings.quickVillages.forEach(v => villages.add(v));
+    return Array.from(villages).sort();
+  }, [students, settings.quickVillages]);
+
   const uniqueDrivers = useMemo(() => drivers.map(d => d.name).sort(), [drivers]);
 
   const filteredStudents = useMemo(() => {
@@ -247,6 +260,23 @@ export const Students: React.FC<StudentsProps> = ({ students, drivers, onDelete,
     alert(`${targetStudents.length} öğrenci başarıyla mezun edildi ve veriler güncellendi.`);
   };
 
+  const handleClearGrade = (e: React.FormEvent) => {
+    e.preventDefault();
+    const gradeToClear = clearGrade;
+    const targetStudents = students.filter(s => s.className.trim().startsWith(gradeToClear));
+
+    if (targetStudents.length === 0) {
+      alert(`${gradeToClear}. sınıf seviyesinde öğrenci bulunamadı.`);
+      return;
+    }
+
+    if (!window.confirm(`${targetStudents.length} adet ${gradeToClear}. sınıf öğrencisini TAMAMEN SİLMEK istediğinize emin misiniz? Bu işlem geri alınamaz.`)) return;
+
+    onBulkDelete(targetStudents.map(s => s.id));
+    setIsClearGradeModalOpen(false);
+    alert(`${targetStudents.length} öğrenci başarıyla silindi. Sınıf/Şube bilgileri sistemde (güzergah tanımlarında vb.) korunacaktır.`);
+  };
+
   const handleDeleteClass = () => {
     if (classFilter === 'all') return;
 
@@ -271,9 +301,31 @@ export const Students: React.FC<StudentsProps> = ({ students, drivers, onDelete,
     }
   };
 
+  const updateQuickLists = (student: Student) => {
+    if (!onUpdateSettings) return;
+
+    let changed = false;
+    const newSettings = { ...settings };
+
+    if (student.className && !settings.quickClasses?.includes(student.className)) {
+      newSettings.quickClasses = Array.from(new Set([...(settings.quickClasses || []), student.className])).sort();
+      changed = true;
+    }
+
+    if (student.village && !settings.quickVillages?.includes(student.village)) {
+      newSettings.quickVillages = Array.from(new Set([...(settings.quickVillages || []), student.village])).sort();
+      changed = true;
+    }
+
+    if (changed) {
+      onUpdateSettings(newSettings);
+    }
+  };
+
   const handleUpdate = (e: React.FormEvent) => {
     e.preventDefault();
     if (editingStudent) {
+      updateQuickLists(editingStudent);
       onUpdate(editingStudent);
       setEditingStudent(null);
     }
@@ -294,6 +346,7 @@ export const Students: React.FC<StudentsProps> = ({ students, drivers, onDelete,
         driver: newStudent.driver || '',
         studentNumber: newStudent.studentNumber || ''
       };
+      updateQuickLists(studentToAdd);
       onAdd(studentToAdd);
       setIsAddModalOpen(false);
       setNewStudent({
@@ -415,9 +468,13 @@ export const Students: React.FC<StudentsProps> = ({ students, drivers, onDelete,
                             <ArrowRightLeft size={16} className="text-blue-500" />
                             Tümünü Üst Sınıfa Taşı
                         </button>
-                        <button onClick={() => setIsGraduateModalOpen(true)} className="w-full text-left px-4 py-3 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2">
+                        <button onClick={() => setIsGraduateModalOpen(true)} className="w-full text-left px-4 py-3 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2 border-b border-slate-100">
                             <GraduationCap size={16} className="text-purple-500" />
                             Belirli Sınıfı Mezun Et
+                        </button>
+                        <button onClick={() => setIsClearGradeModalOpen(true)} className="w-full text-left px-4 py-3 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2">
+                            <Trash2 size={16} className="text-red-500" />
+                            Sınıfı Temizle (Öğrencileri Sil)
                         </button>
                     </div>
                 </div>
@@ -739,6 +796,40 @@ export const Students: React.FC<StudentsProps> = ({ students, drivers, onDelete,
                 <div className="pt-4 flex justify-end gap-2">
                     <button type="button" onClick={() => setIsGraduateModalOpen(false)} className="px-4 py-2 text-slate-600 bg-slate-100 rounded-lg hover:bg-slate-200 font-medium">İptal</button>
                     <button type="submit" className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium">Mezun Et</button>
+                </div>
+             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Clear Grade Modal */}
+      {isClearGradeModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
+             <div className="p-4 border-b border-slate-100 flex justify-between items-center">
+                <h3 className="font-bold text-lg">Sınıfı Temizle</h3>
+                <button onClick={() => setIsClearGradeModalOpen(false)}><X className="text-slate-400 hover:text-slate-600" /></button>
+             </div>
+             <form onSubmit={handleClearGrade} className="p-6 space-y-4">
+                <div>
+                    <p className="text-sm text-slate-500 mb-4">
+                        Hangi seviyedeki tüm öğrencileri silmek istiyorsunuz? Bu işlem sadece öğrenci verilerini siler, sınıf/şube isimleri güzergah planlamalarında kalmaya devam eder.
+                    </p>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Silinecek Sınıf Seviyesi</label>
+                    <select
+                        required
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                        value={clearGrade}
+                        onChange={(e) => setClearGrade(e.target.value)}
+                    >
+                        {[1,2,3,4,5,6,7,8,9,10,11,12].map(num => (
+                            <option key={num} value={num.toString()}>{num}. Sınıflar</option>
+                        ))}
+                    </select>
+                </div>
+                <div className="pt-4 flex justify-end gap-2">
+                    <button type="button" onClick={() => setIsClearGradeModalOpen(false)} className="px-4 py-2 text-slate-600 bg-slate-100 rounded-lg hover:bg-slate-200 font-medium">İptal</button>
+                    <button type="submit" className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium">Öğrencileri Sil</button>
                 </div>
              </form>
           </div>

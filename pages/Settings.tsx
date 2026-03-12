@@ -516,6 +516,109 @@ export const Settings: React.FC<SettingsPageProps> = ({ settings, setSettings })
           )}
         </div>
 
+        {/* Hızlı Listeler (Sınıf ve Köy) */}
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+          <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2 mb-4 pb-2 border-b border-slate-100">
+            <CheckCircle className="text-blue-600" size={20} />
+            Hızlı Seçim Listeleri
+          </h2>
+          <p className="text-sm text-slate-500 mb-4">
+            Öğrenci eklerken veya filtrelerken kullanılan sınıf ve köy listelerini buradan yönetebilirsiniz. Öğrenciler silinse bile bu listedeki bilgiler korunur.
+          </p>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {/* Sınıf Listesi */}
+            <div className="space-y-3">
+              <label className="block text-sm font-bold text-slate-700">Kayıtlı Sınıf/Şube Listesi</label>
+              <div className="flex flex-wrap gap-2 p-3 bg-slate-50 rounded-lg border border-slate-200 min-h-[100px]">
+                {(formData.quickClasses || []).map((c, i) => (
+                  <span key={i} className="bg-white border border-slate-300 text-slate-700 px-2 py-1 rounded-md text-xs flex items-center gap-1 group">
+                    {c}
+                    <button type="button" onClick={() => {
+                      const newList = formData.quickClasses?.filter((_, index) => index !== i) || [];
+                      handleChange('quickClasses', newList);
+                    }} className="text-slate-400 hover:text-red-500 transition-colors">
+                      <X size={12} />
+                    </button>
+                  </span>
+                ))}
+                {(!formData.quickClasses || formData.quickClasses.length === 0) && <span className="text-slate-400 italic text-xs">Henüz sınıf tanımlanmamış.</span>}
+              </div>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  id="newClassInput"
+                  className="flex-1 px-3 py-1.5 border border-slate-300 rounded-lg text-sm outline-none focus:ring-1 focus:ring-blue-500"
+                  placeholder="Yeni Sınıf (Örn: 1/A)"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      const val = (e.currentTarget as HTMLInputElement).value.trim();
+                      if (val && !formData.quickClasses?.includes(val)) {
+                        handleChange('quickClasses', [...(formData.quickClasses || []), val].sort());
+                        (e.currentTarget as HTMLInputElement).value = '';
+                      }
+                    }
+                  }}
+                />
+                <button type="button" onClick={() => {
+                  const input = document.getElementById('newClassInput') as HTMLInputElement;
+                  const val = input.value.trim();
+                  if (val && !formData.quickClasses?.includes(val)) {
+                    handleChange('quickClasses', [...(formData.quickClasses || []), val].sort());
+                    input.value = '';
+                  }
+                }} className="bg-blue-50 text-blue-600 p-2 rounded-lg hover:bg-blue-100 border border-blue-200"><Plus size={18}/></button>
+              </div>
+            </div>
+
+            {/* Köy Listesi */}
+            <div className="space-y-3">
+              <label className="block text-sm font-bold text-slate-700">Kayıtlı Köy/Mahalle Listesi</label>
+              <div className="flex flex-wrap gap-2 p-3 bg-slate-50 rounded-lg border border-slate-200 min-h-[100px]">
+                {(formData.quickVillages || []).map((v, i) => (
+                  <span key={i} className="bg-white border border-slate-300 text-slate-700 px-2 py-1 rounded-md text-xs flex items-center gap-1 group">
+                    {v}
+                    <button type="button" onClick={() => {
+                      const newList = formData.quickVillages?.filter((_, index) => index !== i) || [];
+                      handleChange('quickVillages', newList);
+                    }} className="text-slate-400 hover:text-red-500 transition-colors">
+                      <X size={12} />
+                    </button>
+                  </span>
+                ))}
+                {(!formData.quickVillages || formData.quickVillages.length === 0) && <span className="text-slate-400 italic text-xs">Henüz köy tanımlanmamış.</span>}
+              </div>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  id="newVillageInput"
+                  className="flex-1 px-3 py-1.5 border border-slate-300 rounded-lg text-sm outline-none focus:ring-1 focus:ring-blue-500"
+                  placeholder="Yeni Köy"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      const val = (e.currentTarget as HTMLInputElement).value.trim();
+                      if (val && !formData.quickVillages?.includes(val)) {
+                        handleChange('quickVillages', [...(formData.quickVillages || []), val].sort());
+                        (e.currentTarget as HTMLInputElement).value = '';
+                      }
+                    }
+                  }}
+                />
+                <button type="button" onClick={() => {
+                  const input = document.getElementById('newVillageInput') as HTMLInputElement;
+                  const val = input.value.trim();
+                  if (val && !formData.quickVillages?.includes(val)) {
+                    handleChange('quickVillages', [...(formData.quickVillages || []), val].sort());
+                    input.value = '';
+                  }
+                }} className="bg-blue-50 text-blue-600 p-2 rounded-lg hover:bg-blue-100 border border-blue-200"><Plus size={18}/></button>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Yapay Zeka Ayarları */}
         <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
           <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2 mb-4 pb-2 border-b border-slate-100">

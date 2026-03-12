@@ -32,6 +32,9 @@ export const PrintableTransportReport: React.FC<{
   oabbMiddle: string;
   orientation?: 'portrait' | 'landscape';
 }> = ({ reportData, settings, oabbPrimary, oabbMiddle, orientation = 'portrait' }) => {
+  const hasPrimary = reportData.some(d => d.primaryCount > 0);
+  const hasMiddle = reportData.some(d => d.middleCount > 0);
+
   return (
     <div className="bg-white p-8 font-[Times_New_Roman] text-black leading-relaxed">
       <style>{`
@@ -81,14 +84,18 @@ export const PrintableTransportReport: React.FC<{
 
         {/* Row 2: O.A.B.B */}
         <div className="flex justify-around items-start px-12">
-            <div className="flex flex-col gap-1 w-40">
-                <span>{oabbPrimary}</span>
-                <span>İlkokul O.A.B.B.</span>
-            </div>
-            <div className="flex flex-col gap-1 w-40">
-                <span>{oabbMiddle}</span>
-                <span>Ortaokul O.A.B.B.</span>
-            </div>
+            {hasPrimary && (
+                <div className="flex flex-col gap-1 w-40">
+                    <span>{oabbPrimary}</span>
+                    <span>İlkokul O.A.B.B.</span>
+                </div>
+            )}
+            {hasMiddle && (
+                <div className="flex flex-col gap-1 w-40">
+                    <span>{oabbMiddle}</span>
+                    <span>Ortaokul O.A.B.B.</span>
+                </div>
+            )}
         </div>
       </div>
     </div>
@@ -152,7 +159,18 @@ export const TransportReport: React.FC<TransportReportProps> = ({ students, driv
         const capacity = totalCapacity ? totalCapacity.toString() : "......";
 
         // Generate Default Text dynamically using all sources
-        const defaultDesc = `Taşıma merkezine uzaklığı ${distance} km olup güzergah özellikleri; ${features} niteliktedir. Yerleşim yerinde okul bulunmamaktadır. İlkokuldaki ${counts.p} öğrencinin yönetmeliğin 8/b maddesine göre aynı yerleşim yerindeki ${counts.m} ortaokul öğrencisiyle birlikte toplam ${counts.total} öğrencinin ${capacity} koltuk kapasiteli bir araçla belirlenen taşıma merkezine taşınmasına.`;
+        let studentPart = "";
+        if (counts.p > 0 && counts.m > 0) {
+            studentPart = `İlkokuldaki ${counts.p} öğrencinin yönetmeliğin 8/b maddesine göre aynı yerleşim yerindeki ${counts.m} ortaokul öğrencisiyle birlikte toplam ${counts.total} öğrencinin`;
+        } else if (counts.p > 0) {
+            studentPart = `İlkokuldaki ${counts.p} öğrencinin`;
+        } else if (counts.m > 0) {
+            studentPart = `Ortaokuldaki ${counts.m} öğrencinin`;
+        } else {
+            studentPart = `Toplam ${counts.total} öğrencinin`;
+        }
+
+        const defaultDesc = `Taşıma merkezine uzaklığı ${distance} km olup güzergah özellikleri; ${features} niteliktedir. Yerleşim yerinde okul bulunmamaktadır. ${studentPart} ${capacity} koltuk kapasiteli bir araçla belirlenen taşıma merkezine taşınmasına.`;
 
         return {
             id: route,
@@ -214,7 +232,18 @@ export const TransportReport: React.FC<TransportReportProps> = ({ students, driv
       const totalCapacity = plan ? (plan.vehicleCount * plan.capacity) : null;
       const capacity = totalCapacity ? totalCapacity.toString() : "......";
 
-      const defaultDesc = `Taşıma merkezine uzaklığı ${distance} km olup güzergah özellikleri; ${features} niteliktedir. Yerleşim yerinde okul bulunmamaktadır. İlkokuldaki ${item.primaryCount} öğrencinin yönetmeliğin 8/b maddesine göre aynı yerleşim yerindeki ${item.middleCount} ortaokul öğrencisiyle birlikte toplam ${item.totalCount} öğrencinin ${capacity} koltuk kapasiteli bir araçla belirlenen taşıma merkezine taşınmasına.`;
+      let studentPart = "";
+      if (item.primaryCount > 0 && item.middleCount > 0) {
+          studentPart = `İlkokuldaki ${item.primaryCount} öğrencinin yönetmeliğin 8/b maddesine göre aynı yerleşim yerindeki ${item.middleCount} ortaokul öğrencisiyle birlikte toplam ${item.totalCount} öğrencinin`;
+      } else if (item.primaryCount > 0) {
+          studentPart = `İlkokuldaki ${item.primaryCount} öğrencinin`;
+      } else if (item.middleCount > 0) {
+          studentPart = `Ortaokuldaki ${item.middleCount} öğrencinin`;
+      } else {
+          studentPart = `Toplam ${item.totalCount} öğrencinin`;
+      }
+
+      const defaultDesc = `Taşıma merkezine uzaklığı ${distance} km olup güzergah özellikleri; ${features} niteliktedir. Yerleşim yerinde okul bulunmamaktadır. ${studentPart} ${capacity} koltuk kapasiteli bir araçla belirlenen taşıma merkezine taşınmasına.`;
 
       if(confirm("Metni diğer sayfalardaki (Mesafe, Şoför/Koltuk, Planlama) güncel verilere göre sıfırlamak istediğinize emin misiniz?")) {
           handleSaveDescription(item.id, defaultDesc);
@@ -309,12 +338,24 @@ export const TransportReport: React.FC<TransportReportProps> = ({ students, driv
       <div className="space-y-4">
           {reportData.map((item, index) => (
               <div key={item.id} className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                  <div className="bg-slate-50 px-4 py-3 border-b border-slate-200 flex justify-between items-center">
-                      <h3 className="font-bold text-slate-800">{index + 1}. {item.route}</h3>
-                      <div className="flex items-center gap-2 text-xs text-slate-500">
-                          <span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded">İlkokul: {item.primaryCount}</span>
-                          <span className="bg-orange-100 text-orange-700 px-2 py-0.5 rounded">Ortaokul: {item.middleCount}</span>
-                          <span className="bg-green-100 text-green-700 px-2 py-0.5 rounded font-bold">Toplam: {item.totalCount}</span>
+                  <div className="bg-slate-50 px-4 py-3 border-b border-slate-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                      <div className="flex items-center gap-3">
+                        <h3 className="font-bold text-slate-800">{index + 1}. {item.route}</h3>
+                        <span className="text-[10px] font-bold bg-slate-200 text-slate-600 px-2 py-0.5 rounded-full">{item.distance} KM</span>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2 text-xs">
+                          <div className="flex items-center gap-1 bg-blue-50 text-blue-700 px-2.5 py-1 rounded-lg border border-blue-100 shadow-sm">
+                            <span className="font-medium">İlkokul:</span>
+                            <span className="font-bold text-sm">{item.primaryCount}</span>
+                          </div>
+                          <div className="flex items-center gap-1 bg-orange-50 text-orange-700 px-2.5 py-1 rounded-lg border border-orange-100 shadow-sm">
+                            <span className="font-medium">Ortaokul:</span>
+                            <span className="font-bold text-sm">{item.middleCount}</span>
+                          </div>
+                          <div className="flex items-center gap-1 bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-lg border border-emerald-100 shadow-sm">
+                            <span className="font-medium">Toplam:</span>
+                            <span className="font-bold text-sm">{item.totalCount}</span>
+                          </div>
                       </div>
                   </div>
                   <div className="p-4">

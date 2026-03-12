@@ -47,8 +47,9 @@ export interface AppSettings {
   villageLocations?: Record<string, { lat: number; lng: number }>; // Köy Konumları
   // Yapay Zeka
   googleApiKey?: string;
-  // Hızlı Köy Listesi
+  // Hızlı Köy ve Sınıf Listeleri
   quickVillages?: string[];
+  quickClasses?: string[];
 }
 
 export interface SavedPlanning {
