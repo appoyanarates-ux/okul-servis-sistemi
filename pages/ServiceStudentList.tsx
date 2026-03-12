@@ -43,59 +43,26 @@ export const PrintableServiceList: React.FC<{
       {/* HEADER TABLE */}
       <table className="w-full text-xs mb-0 border-black">
           <tbody>
-              <tr>
-                  <td className="w-[40%] font-bold p-1 text-center bg-slate-50">TAŞIMA MERKEZİ OKULUN ADI</td>
-                  <td className="p-1 text-center font-bold uppercase">{settings.schoolName}</td>
-              </tr>
-              <tr>
-                  <td className="font-bold p-1 text-center bg-slate-50">TAŞIMA GÜZERGAHI</td>
-                  <td className="p-1 text-center">{routeText}</td>
-              </tr>
-              <tr>
-                  <td className="font-bold p-1 text-center bg-slate-50">TAŞIMA YAPAN ŞOFÖRÜN ADI</td>
-                  <td className="p-1 text-center font-bold">{driver?.name || ''}</td>
-              </tr>
-              <tr>
-                  <td className="font-bold p-1 text-center bg-slate-50">TAŞIMA YAPAN ŞOFÖRÜN TELEFON NUMARASI</td>
-                  <td className="p-1 text-center">{driver?.phone || ''}</td>
-              </tr>
-              <tr>
-                  <td className="font-bold p-1 text-center bg-slate-50">TAŞIMA YAPAN ARACIN PLAKASI</td>
-                  <td className="p-1 text-center font-bold">{driver?.plateNumber || ''}</td>
-              </tr>
+              <tr><td className="w-[40%] font-bold p-1 text-center bg-slate-50">TAŞIMA MERKEZİ OKULUN ADI</td><td className="p-1 text-center font-bold uppercase">{settings.schoolName}</td></tr>
+              <tr><td className="font-bold p-1 text-center bg-slate-50">TAŞIMA GÜZERGAHI</td><td className="p-1 text-center">{routeText}</td></tr>
+              <tr><td className="font-bold p-1 text-center bg-slate-50">TAŞIMA YAPAN ŞOFÖRÜN ADI</td><td className="p-1 text-center font-bold">{driver?.name || ''}</td></tr>
+              <tr><td className="font-bold p-1 text-center bg-slate-50">TAŞIMA YAPAN ŞOFÖRÜN TELEFON NUMARASI</td><td className="p-1 text-center">{driver?.phone || ''}</td></tr>
+              <tr><td className="font-bold p-1 text-center bg-slate-50">TAŞIMA YAPAN ARACIN PLAKASI</td><td className="p-1 text-center font-bold">{driver?.plateNumber || ''}</td></tr>
           </tbody>
       </table>
 
       {/* STUDENT LIST TABLE */}
       <table className="w-full text-xs text-center border-t-0">
         <thead>
-          <tr className="bg-slate-50 font-bold">
-            <th className="p-1 w-8 border-t-0">NO</th>
-            <th className="p-1 text-left border-t-0">ÖĞRENCİ ADI SOYADI</th>
-            <th className="p-1 w-16 border-t-0">SINIFI</th>
-            <th className="p-1 w-[25%] border-t-0">VELİNİN ADI SOYADI</th>
-            <th className="p-1 w-[20%] border-t-0">TELEFON NUMARASI</th>
-          </tr>
+          <tr className="bg-slate-50 font-bold"><th className="p-1 w-8 border-t-0">NO</th><th className="p-1 text-left border-t-0">ÖĞRENCİ ADI SOYADI</th><th className="p-1 w-16 border-t-0">SINIFI</th><th className="p-1 w-[25%] border-t-0">VELİNİN ADI SOYADI</th><th className="p-1 w-[20%] border-t-0">TELEFON NUMARASI</th></tr>
         </thead>
         <tbody>
           {displayRows.data.map((student, index) => (
-            <tr key={student.id} className="break-inside-avoid h-6">
-              <td className="p-1 font-bold">{index + 1}</td>
-              <td className="p-1 text-left font-medium px-2 uppercase">{student.name}</td>
-              <td className="p-1">{student.className}</td>
-              <td className="p-1"></td> {/* Manual Entry */}
-              <td className="p-1"></td> {/* Manual Entry */}
-            </tr>
+            <tr key={student.id} className="break-inside-avoid h-6"><td className="p-1 font-bold">{index + 1}</td><td className="p-1 text-left font-medium px-2 uppercase">{student.name}</td><td className="p-1">{student.className}</td><td className="p-1">{/* Manual Entry */}</td><td className="p-1">{/* Manual Entry */}</td></tr>
           ))}
           {/* Fill Empty Rows */}
           {Array.from({ length: displayRows.emptyCount }).map((_, i) => (
-              <tr key={`empty-${i}`} className="h-6">
-                  <td className="p-1">{displayRows.data.length + i + 1}</td>
-                  <td className="p-1"></td>
-                  <td className="p-1"></td>
-                  <td className="p-1"></td>
-                  <td className="p-1"></td>
-              </tr>
+              <tr key={`empty-${i}`} className="h-6"><td className="p-1">{displayRows.data.length + i + 1}</td><td className="p-1"></td><td className="p-1"></td><td className="p-1"></td><td className="p-1"></td></tr>
           ))}
         </tbody>
       </table>
@@ -343,25 +310,11 @@ export const ServiceStudentList: React.FC<ServiceStudentListProps> = ({ students
                           <div className="overflow-x-auto">
                               <table className="w-full text-left text-sm">
                                   <thead className="bg-slate-50 border-b border-slate-200 text-slate-600">
-                                      <tr>
-                                          <th className="px-6 py-4 w-12 font-bold">#</th>
-                                          <th className="px-6 py-4 font-bold">Öğrenci Adı</th>
-                                          <th className="px-6 py-4 font-bold">Okul</th>
-                                          <th className="px-6 py-4 font-bold text-center">Sınıf</th>
-                                          <th className="px-6 py-4 font-bold text-center">Cinsiyet</th>
-                                          <th className="px-6 py-4 font-bold">Köy</th>
-                                      </tr>
+                                      <tr><th className="px-6 py-4 w-12 font-bold">#</th><th className="px-6 py-4 font-bold">Öğrenci Adı</th><th className="px-6 py-4 font-bold">Okul</th><th className="px-6 py-4 font-bold text-center">Sınıf</th><th className="px-6 py-4 font-bold text-center">Cinsiyet</th><th className="px-6 py-4 font-bold">Köy</th></tr>
                                   </thead>
                                   <tbody className="divide-y divide-slate-100">
                                       {filteredStudents.map((student, index) => (
-                                          <tr key={student.id} className="hover:bg-slate-50 transition-colors">
-                                              <td className="px-6 py-3 font-mono text-slate-500">{index + 1}</td>
-                                              <td className="px-6 py-3 font-medium text-slate-800">{student.name}</td>
-                                              <td className="px-6 py-3 text-slate-600 text-xs">{student.schoolName}</td>
-                                              <td className="px-6 py-3 text-center"><span className="px-2 py-1 bg-slate-100 rounded text-xs font-bold text-slate-600 border border-slate-200">{student.className}</span></td>
-                                              <td className="px-6 py-3 text-center text-xs text-slate-500">{student.gender}</td>
-                                              <td className="px-6 py-3 text-slate-600 text-xs">{student.village}</td>
-                                          </tr>
+                                          <tr key={student.id} className="hover:bg-slate-50 transition-colors"><td className="px-6 py-3 font-mono text-slate-500">{index + 1}</td><td className="px-6 py-3 font-medium text-slate-800">{student.name}</td><td className="px-6 py-3 text-slate-600 text-xs">{student.schoolName}</td><td className="px-6 py-3 text-center"><span className="px-2 py-1 bg-slate-100 rounded text-xs font-bold text-slate-600 border border-slate-200">{student.className}</span></td><td className="px-6 py-3 text-center text-xs text-slate-500">{student.gender}</td><td className="px-6 py-3 text-slate-600 text-xs">{student.village}</td></tr>
                                       ))}
                                       {filteredStudents.length === 0 && (
                                           <tr><td colSpan={6} className="px-6 py-12 text-center text-slate-400">Bu şoföre atanmış öğrenci bulunmamaktadır.</td></tr>

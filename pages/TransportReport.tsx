@@ -152,11 +152,8 @@ export const TransportReport: React.FC<TransportReportProps> = ({ students, driv
         // Clean up features text to flow in sentence (lowercase if not special)
         features = features.replace(/\.$/, ''); // Remove trailing dot
 
-        // C. Capacity: Get from Transport Planning (vehicleCount * capacity) or fallback to "......"
-        const plan = planData[route];
-        // Calculate total capacity based on student counts if plan data is missing or to ensure it matches
-        const totalCapacity = plan ? (plan.vehicleCount * plan.capacity) : null;
-        const capacity = totalCapacity ? totalCapacity.toString() : "......";
+        // C. Capacity: Match total student count as requested by user
+        const capacity = counts.total.toString();
 
         // Generate Default Text dynamically using all sources
         let studentPart = "";
@@ -227,10 +224,8 @@ export const TransportReport: React.FC<TransportReportProps> = ({ students, driv
       let features = distanceMap.get(item.route)?.features || "yolu asfalt";
       features = features.replace(/\.$/, '');
 
-      // Recalculate capacity from Transport Planning
-      const plan = planData[item.route];
-      const totalCapacity = plan ? (plan.vehicleCount * plan.capacity) : null;
-      const capacity = totalCapacity ? totalCapacity.toString() : "......";
+      // Recalculate capacity to match total student count
+      const capacity = item.totalCount.toString();
 
       let studentPart = "";
       if (item.primaryCount > 0 && item.middleCount > 0) {
@@ -354,6 +349,10 @@ export const TransportReport: React.FC<TransportReportProps> = ({ students, driv
                           </div>
                           <div className="flex items-center gap-1 bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-lg border border-emerald-100 shadow-sm">
                             <span className="font-medium">Toplam:</span>
+                            <span className="font-bold text-sm">{item.totalCount}</span>
+                          </div>
+                          <div className="flex items-center gap-1 bg-indigo-50 text-indigo-700 px-2.5 py-1 rounded-lg border border-indigo-100 shadow-sm">
+                            <span className="font-medium">Koltuk:</span>
                             <span className="font-bold text-sm">{item.totalCount}</span>
                           </div>
                       </div>

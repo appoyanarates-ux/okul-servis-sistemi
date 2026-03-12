@@ -46,31 +46,11 @@ export const PrintableStudentList: React.FC<{
       </div>
       <table className="w-full text-xs text-center">
         <thead>
-          <tr className="bg-slate-100 font-bold">
-            <th className="p-1 w-8">S.No</th>
-            <th className="p-1 w-16">Okul No</th>
-            <th className="p-1 text-left">Adı Soyadı</th>
-            <th className="p-1 text-left">Okul</th>
-            <th className="p-1 w-16">Sınıf</th>
-            <th className="p-1 w-16">Cinsiyet</th>
-            <th className="p-1">Köy / Mahalle</th>
-            <th className="p-1">Güzergah</th>
-            <th className="p-1">Şoför</th>
-          </tr>
+          <tr className="bg-slate-100 font-bold"><th className="p-1 w-8">S.No</th><th className="p-1 w-16">Okul No</th><th className="p-1 text-left">Adı Soyadı</th><th className="p-1 text-left">Okul</th><th className="p-1 w-16">Sınıf</th><th className="p-1 w-16">Cinsiyet</th><th className="p-1">Köy / Mahalle</th><th className="p-1">Güzergah</th><th className="p-1">Şoför</th></tr>
         </thead>
         <tbody>
           {students.map((student, index) => (
-            <tr key={student.id}>
-              <td className="p-1 font-bold">{index + 1}</td>
-              <td className="p-1">{student.studentNumber || ''}</td>
-              <td className="p-1 text-left">{student.name}</td>
-              <td className="p-1 text-left">{student.schoolName}</td>
-              <td className="p-1">{student.className}</td>
-              <td className="p-1">{student.gender}</td>
-              <td className="p-1">{student.village}</td>
-              <td className="p-1">{student.route}</td>
-              <td className="p-1">{student.driver}</td>
-            </tr>
+            <tr key={student.id}><td className="p-1 font-bold">{index + 1}</td><td className="p-1">{student.studentNumber || ''}</td><td className="p-1 text-left">{student.name}</td><td className="p-1 text-left">{student.schoolName}</td><td className="p-1">{student.className}</td><td className="p-1">{student.gender}</td><td className="p-1">{student.village}</td><td className="p-1">{student.route}</td><td className="p-1">{student.driver}</td></tr>
           ))}
         </tbody>
       </table>
@@ -578,87 +558,10 @@ export const Students: React.FC<StudentsProps> = ({ students, drivers, onDelete,
               {filteredStudents.length > 0 ? (filteredStudents.map((student, index) => {
                   const isSelected = selectedIds.has(student.id);
                   return (
-                    <tr key={student.id} className={`group transition-all duration-200 ${isSelected ? 'bg-blue-50/40' : 'hover:bg-slate-50/60'}`}>
-                        <td className="px-4 py-4 text-center">
-                            <button onClick={() => toggleSelect(student.id)} className="flex items-center justify-center text-slate-300 hover:text-blue-600 transition-colors">
-                                {isSelected ? <CheckSquare size={20} className="text-blue-600" /> : <Square size={20} />}
-                            </button>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="flex items-center gap-4">
-                            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-sm font-bold shrink-0 shadow-sm border-2 border-white ${student.gender === 'KIZ' ? 'bg-gradient-to-br from-pink-100 to-pink-50 text-pink-600' : 'bg-gradient-to-br from-blue-100 to-blue-50 text-blue-600'}`}>
-                              {getInitials(student.name)}
-                            </div>
-                            <div>
-                              <div className="font-bold text-slate-800 text-base">{student.name}</div>
-                              <div className="flex items-center gap-2 mt-0.5">
-                                <span className="text-xs font-mono text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">#{student.sn}</span>
-                                {student.studentNumber && <span className="text-xs text-slate-500">No: {student.studentNumber}</span>}
-                              </div>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="flex flex-col gap-2">
-                            <div className="flex items-center gap-2">
-                              <span className={`px-2.5 py-1 rounded-lg text-[10px] font-bold tracking-wide border ${student.schoolName.includes('Ortaokul') ? 'bg-indigo-50 text-indigo-700 border-indigo-100' : 'bg-orange-50 text-orange-700 border-orange-100'}`}>
-                                {student.schoolName.includes('Ortaokul') ? 'ORTAOKUL' : 'İLKOKUL'}
-                              </span>
-                              <span className="text-sm font-semibold text-slate-700">{student.className}</span>
-                            </div>
-                            <div className="flex items-center gap-1.5 text-xs text-slate-500">
-                                <School size={12} className="text-slate-400" />
-                                {student.schoolName}
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="flex flex-col gap-2">
-                            <div className="flex items-center gap-2 text-sm text-slate-700">
-                              <div className="w-6 h-6 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
-                                <MapPin size={12} />
-                              </div>
-                              <span className="font-medium">{student.village || '-'}</span>
-                            </div>
-                            <div className="flex items-center gap-3 pl-1">
-                              <div className="flex items-center gap-1.5 text-xs text-slate-500" title={`Güzergah: ${student.route}`}>
-                                <Route size={12} className="text-slate-400" />
-                                <span className="truncate max-w-[120px]">{student.route || 'Yok'}</span>
-                              </div>
-                              <div className="flex items-center gap-1.5 text-xs text-slate-500" title={`Şoför: ${student.driver}`}>
-                                <User size={12} className="text-slate-400" />
-                                <span className="truncate max-w-[100px]">{student.driver || 'Yok'}</span>
-                              </div>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4">
-                            <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-all transform translate-x-2 group-hover:translate-x-0">
-                                <button type="button" onClick={() => setEditingStudent(student)} className="p-2 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Düzenle">
-                                    <Edit size={18} />
-                                </button>
-                                <button type="button" onClick={(e) => handleDeleteClick(student, e)} className="p-2 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Sil">
-                                    <Trash2 size={18} />
-                                </button>
-                            </div>
-                        </td>
-                    </tr>
+                    <tr key={student.id} className={`group transition-all duration-200 ${isSelected ? 'bg-blue-50/40' : 'hover:bg-slate-50/60'}`}><td className="px-4 py-4 text-center"><button onClick={() => toggleSelect(student.id)} className="flex items-center justify-center text-slate-300 hover:text-blue-600 transition-colors">{isSelected ? <CheckSquare size={20} className="text-blue-600" /> : <Square size={20} />}</button></td><td className="px-6 py-4"><div className="flex items-center gap-4"><div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-sm font-bold shrink-0 shadow-sm border-2 border-white ${student.gender === 'KIZ' ? 'bg-gradient-to-br from-pink-100 to-pink-50 text-pink-600' : 'bg-gradient-to-br from-blue-100 to-blue-50 text-blue-600'}`}>{getInitials(student.name)}</div><div><div className="font-bold text-slate-800 text-base">{student.name}</div><div className="flex items-center gap-2 mt-0.5"><span className="text-xs font-mono text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">#{student.sn}</span>{student.studentNumber && <span className="text-xs text-slate-500">No: {student.studentNumber}</span>}</div></div></div></td><td className="px-6 py-4"><div className="flex flex-col gap-2"><div className="flex items-center gap-2"><span className={`px-2.5 py-1 rounded-lg text-[10px] font-bold tracking-wide border ${student.schoolName.includes('Ortaokul') ? 'bg-indigo-50 text-indigo-700 border-indigo-100' : 'bg-orange-50 text-orange-700 border-orange-100'}`}>{student.schoolName.includes('Ortaokul') ? 'ORTAOKUL' : 'İLKOKUL'}</span><span className="text-sm font-semibold text-slate-700">{student.className}</span></div><div className="flex items-center gap-1.5 text-xs text-slate-500"><School size={12} className="text-slate-400" />{student.schoolName}</div></div></td><td className="px-6 py-4"><div className="flex flex-col gap-2"><div className="flex items-center gap-2 text-sm text-slate-700"><div className="w-6 h-6 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0"><MapPin size={12} /></div><span className="font-medium">{student.village || '-'}</span></div><div className="flex items-center gap-3 pl-1"><div className="flex items-center gap-1.5 text-xs text-slate-500" title={`Güzergah: ${student.route}`}><Route size={12} className="text-slate-400" /><span className="truncate max-w-[120px]">{student.route || 'Yok'}</span></div><div className="flex items-center gap-1.5 text-xs text-slate-500" title={`Şoför: ${student.driver}`}><User size={12} className="text-slate-400" /><span className="truncate max-w-[100px]">{student.driver || 'Yok'}</span></div></div></div></td><td className="px-6 py-4"><div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-all transform translate-x-2 group-hover:translate-x-0"><button type="button" onClick={() => setEditingStudent(student)} className="p-2 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Düzenle"><Edit size={18} /></button><button type="button" onClick={(e) => handleDeleteClick(student, e)} className="p-2 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Sil"><Trash2 size={18} /></button></div></td></tr>
                   );
               })) : (
-                <tr>
-                    <td colSpan={5} className="px-6 py-16 text-center">
-                        <div className="flex flex-col items-center justify-center text-slate-400">
-                            <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-4">
-                                <Search size={32} className="text-slate-300" />
-                            </div>
-                            <p className="text-lg font-medium text-slate-600">Öğrenci bulunamadı</p>
-                            <p className="text-sm mt-1">Arama kriterlerinizi değiştirerek tekrar deneyin.</p>
-                            <button onClick={() => {setSearchTerm(''); setClassFilter('all'); setRouteFilter('all');}} className="mt-4 text-blue-600 hover:text-blue-700 font-medium text-sm">
-                                Filtreleri Temizle
-                            </button>
-                        </div>
-                    </td>
-                </tr>
+                <tr><td colSpan={5} className="px-6 py-16 text-center"><div className="flex flex-col items-center justify-center text-slate-400"><div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-4"><Search size={32} className="text-slate-300" /></div><p className="text-lg font-medium text-slate-600">Öğrenci bulunamadı</p><p className="text-sm mt-1">Arama kriterlerinizi değiştirerek tekrar deneyin.</p><button onClick={() => {setSearchTerm(''); setClassFilter('all'); setRouteFilter('all');}} className="mt-4 text-blue-600 hover:text-blue-700 font-medium text-sm">Filtreleri Temizle</button></div></td></tr>
               )}
             </tbody>
           </table>
