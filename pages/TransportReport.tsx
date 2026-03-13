@@ -245,6 +245,47 @@ export const TransportReport: React.FC<TransportReportProps> = ({ students, driv
       }
   };
 
+  const handleResetAll = () => {
+    if(confirm("Tüm güzergahların açıklamalarını güncel verilerle (Mesafe, Şoför, Planlama, Öğrenci Sayıları) sıfırlamak istediğinize emin misiniz?")) {
+        const planData = loadTransportPlanData();
+        const distanceData = loadDistanceReportData();
+        const distanceMap = new Map(distanceData.map((d: any) => [d.route, d]));
+
+        const newData = reportData.map(item => {
+            const distFromReport = distanceMap.get(item.route)?.total;
+            const distFromPlan = planData[item.route]?.distance;
+            const distance = distFromReport || distFromPlan || 0;
+
+            let features = distanceMap.get(item.route)?.features || "yolu asfalt";
+            features = features.replace(/\.$/, '');
+
+            const capacity = item.totalCount.toString();
+
+            let studentPart = "";
+            if (item.primaryCount > 0 && item.middleCount > 0) {
+                studentPart = `İlkokuldaki ${item.primaryCount} öğrencinin yönetmeliğin 8/b maddesine göre aynı yerleşim yerindeki ${item.middleCount} ortaokul öğrencisiyle birlikte toplam ${item.totalCount} öğrencinin`;
+            } else if (item.primaryCount > 0) {
+                studentPart = `İlkokuldaki ${item.primaryCount} öğrencinin`;
+            } else if (item.middleCount > 0) {
+                studentPart = `Ortaokuldaki ${item.middleCount} öğrencinin`;
+            } else {
+                studentPart = `Toplam ${item.totalCount} öğrencinin`;
+            }
+
+            const defaultDesc = `Taşıma merkezine uzaklığı ${distance} km olup güzergah özellikleri; ${features} niteliktedir. Yerleşim yerinde okul bulunmamaktadır. ${studentPart} ${capacity} koltuk kapasiteli bir araçla belirlenen taşıma merkezine taşınmasına.`;
+
+            return { ...item, description: defaultDesc };
+        });
+
+        setReportData(newData);
+
+        // Save to LocalStorage
+        const descMap: Record<string, string> = {};
+        newData.forEach(d => descMap[d.id] = d.description);
+        localStorage.setItem('okulservis_report_descriptions_v1', JSON.stringify(descMap));
+    }
+  };
+
   const handleDownloadPDF = () => {
     if (!hiddenPrintRef.current) return;
     setIsDownloading(true);
@@ -310,6 +351,7 @@ export const TransportReport: React.FC<TransportReportProps> = ({ students, driv
                 <button onClick={() => setOrientation('landscape')} className={`px-2 py-1.5 rounded text-xs font-medium flex items-center gap-1 transition-colors ${orientation === 'landscape' ? 'bg-blue-100 text-blue-700' : 'text-slate-500 hover:bg-slate-50'}`}><ArrowRightLeft size={14} /></button>
             </div>
             <button onClick={() => setIsPreviewing(true)} className="flex items-center space-x-2 bg-violet-50 text-violet-700 hover:bg-violet-100 px-3 py-2 rounded-lg transition-colors font-medium border border-violet-200" title="Önizle"><Eye size={16} /><span className="hidden sm:inline">Önizle</span></button>
+            <button onClick={handleResetAll} className="flex items-center space-x-2 bg-amber-50 text-amber-700 hover:bg-amber-100 px-3 py-2 rounded-lg transition-colors font-medium border border-amber-200" title="Tümünü Sıfırla"><RefreshCw size={16} /><span className="hidden sm:inline">Tümünü Sıfırla</span></button>
             <button onClick={handleDownloadPDF} disabled={isDownloading} className="flex items-center space-x-2 bg-red-50 text-red-700 hover:bg-red-100 px-3 py-2 rounded-lg transition-colors font-medium border border-red-200 shadow-sm disabled:opacity-50"><Download size={16} /><span className="hidden sm:inline">{isDownloading ? '...' : 'PDF İndir'}</span></button>
         </div>
       </div>

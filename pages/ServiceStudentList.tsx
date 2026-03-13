@@ -21,19 +21,12 @@ export const PrintableServiceList: React.FC<{
   orientation?: 'portrait' | 'landscape';
 }> = ({ students, driver, settings, orientation = 'portrait' }) => {
 
-  // Adjusted to 25 rows to ensure signature block fits on one page
-  const displayRows = useMemo(() => {
-      const minRows = 25;
-      const emptyRowsCount = Math.max(0, minRows - students.length);
-      return { data: students, emptyCount: emptyRowsCount };
-  }, [students]);
-
   const routeText = driver?.routes && driver.routes.length > 0 ? driver.routes.join(' + ') : (students.length > 0 ? students[0].route : '');
 
   return (
     <div className="bg-white p-8 font-['Times_New_Roman'] text-black h-full relative">
       <style>{`
-        @page { size: ${orientation}; margin: 10mm; }
+        @page { size: A4 ${orientation}; margin: 10mm; }
         body { background-color: white !important; font-family: 'Times New Roman', Times, serif !important; }
         table, th, td { border: 1px solid black !important; border-collapse: collapse !important; }
         .break-inside-avoid { page-break-inside: avoid; }
@@ -57,12 +50,8 @@ export const PrintableServiceList: React.FC<{
           <tr className="bg-slate-50 font-bold"><th className="p-1 w-8 border-t-0">NO</th><th className="p-1 text-left border-t-0">ÖĞRENCİ ADI SOYADI</th><th className="p-1 w-16 border-t-0">SINIFI</th><th className="p-1 w-[25%] border-t-0">VELİNİN ADI SOYADI</th><th className="p-1 w-[20%] border-t-0">TELEFON NUMARASI</th></tr>
         </thead>
         <tbody>
-          {displayRows.data.map((student, index) => (
+          {students.map((student, index) => (
             <tr key={student.id} className="break-inside-avoid h-6"><td className="p-1 font-bold">{index + 1}</td><td className="p-1 text-left font-medium px-2 uppercase">{student.name}</td><td className="p-1">{student.className}</td><td className="p-1">{/* Manual Entry */}</td><td className="p-1">{/* Manual Entry */}</td></tr>
-          ))}
-          {/* Fill Empty Rows */}
-          {Array.from({ length: displayRows.emptyCount }).map((_, i) => (
-              <tr key={`empty-${i}`} className="h-6"><td className="p-1">{displayRows.data.length + i + 1}</td><td className="p-1"></td><td className="p-1"></td><td className="p-1"></td><td className="p-1"></td></tr>
           ))}
         </tbody>
       </table>
@@ -115,13 +104,54 @@ export const PrintableServiceList: React.FC<{
   );
 };
 
+export const PrintableAllServiceLists: React.FC<{
+  students: Student[];
+  drivers: Driver[];
+  settings: AppSettings;
+  orientation?: 'portrait' | 'landscape';
+}> = ({ students, drivers, settings, orientation = 'portrait' }) => {
+  return (
+    <div className="bg-white font-['Times_New_Roman'] text-black">
+      <style>{`
+        @page { size: A4 ${orientation}; margin: 10mm; }
+        body { background-color: white !important; font-family: 'Times New Roman', Times, serif !important; }
+        table, th, td { border: 1px solid black !important; border-collapse: collapse !important; }
+        .break-inside-avoid { page-break-inside: avoid; }
+        .print-header-cell { background-color: #f3f4f6 !important; font-weight: bold; text-align: center; }
+        .page-break { page-break-after: always; }
+      `}</style>
+      {drivers.map((driver, index) => {
+        const driverStudents = students
+          .filter(s => s.driver === driver.name)
+          .sort((a, b) => a.name.localeCompare(b.name, 'tr-TR'));
+
+        if (driverStudents.length === 0) return null;
+
+        return (
+          <div key={driver.id} className={index < drivers.length - 1 ? 'page-break' : ''}>
+            <PrintableServiceList
+              students={driverStudents}
+              driver={driver}
+              settings={settings}
+              orientation={orientation}
+            />
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
 // --- MAIN COMPONENT ---
 export const ServiceStudentList: React.FC<ServiceStudentListProps> = ({ students, drivers, settings }) => {
   const [selectedDriverId, setSelectedDriverId] = useState<string>('');
   const [isPreviewing, setIsPreviewing] = useState(false);
+  const [isPreviewingAll, setIsPreviewingAll] = useState(false);
   const [orientation, setOrientation] = useState<'portrait' | 'landscape'>('portrait');
   const [isDownloading, setIsDownloading] = useState(false);
+  const [isDownloadingAll, setIsDownloadingAll] = useState(false);
   const hiddenPrintRef = React.useRef<HTMLDivElement>(null);
+  const hiddenPrintAllRef = React.useRef<HTMLDivElement>(null);
 
   // Filter Data
   const selectedDriver = useMemo(() => drivers.find(d => d.id === selectedDriverId), [drivers, selectedDriverId]);
@@ -164,6 +194,27 @@ export const ServiceStudentList: React.FC<ServiceStudentListProps> = ({ students
     }
   };
 
+  const handleDownloadAllPDF = () => {
+    if (!hiddenPrintAllRef.current) return;
+    setIsDownloadingAll(true);
+
+    const element = hiddenPrintAllRef.current;
+    const opt = {
+      margin: 5,
+      filename: `Tum_Servis_Listeleri.pdf`,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2, useCORS: true },
+      jsPDF: { unit: 'mm', format: orientation, orientation: orientation }
+    };
+
+    if (typeof html2pdf !== 'undefined') {
+        html2pdf().set(opt).from(element).save().then(() => setIsDownloadingAll(false));
+    } else {
+        alert("PDF modülü yüklenemedi.");
+        setIsDownloadingAll(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {isPreviewing && (
@@ -181,12 +232,35 @@ export const ServiceStudentList: React.FC<ServiceStudentListProps> = ({ students
         </PrintPreview>
       )}
 
+      {isPreviewingAll && (
+        <PrintPreview
+          title="Tüm Servis Öğrenci Listeleri"
+          onBack={() => setIsPreviewingAll(false)}
+          orientation={orientation}
+        >
+          <PrintableAllServiceLists
+            students={students}
+            drivers={drivers}
+            settings={settings}
+            orientation={orientation}
+          />
+        </PrintPreview>
+      )}
+
       {/* Hidden for PDF generation */}
       <div className="hidden">
           <div ref={hiddenPrintRef}>
             <PrintableServiceList
                 students={filteredStudents}
                 driver={selectedDriver}
+                settings={settings}
+                orientation={orientation}
+            />
+          </div>
+          <div ref={hiddenPrintAllRef}>
+            <PrintableAllServiceLists
+                students={students}
+                drivers={drivers}
                 settings={settings}
                 orientation={orientation}
             />
@@ -208,6 +282,9 @@ export const ServiceStudentList: React.FC<ServiceStudentListProps> = ({ students
 
             <button onClick={() => setIsPreviewing(true)} disabled={!selectedDriver} className="flex items-center space-x-2 bg-violet-50 text-violet-700 hover:bg-violet-100 px-3 py-2 rounded-lg transition-colors font-medium border border-violet-200 disabled:opacity-50 shadow-sm"><Eye size={16} /><span className="hidden sm:inline">Önizle</span></button>
             <button onClick={handleDownloadPDF} disabled={!selectedDriver || isDownloading} className="flex items-center space-x-2 bg-red-50 text-red-700 hover:bg-red-100 px-3 py-2 rounded-lg transition-colors font-medium border border-red-200 disabled:opacity-50 shadow-sm"><Download size={16} /><span className="hidden sm:inline">{isDownloading ? '...' : 'PDF İndir'}</span></button>
+            <div className="w-px h-6 bg-slate-300 mx-1"></div>
+            <button onClick={() => setIsPreviewingAll(true)} disabled={drivers.length === 0} className="flex items-center space-x-2 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 px-3 py-2 rounded-lg transition-colors font-medium border border-indigo-200 disabled:opacity-50 shadow-sm"><Eye size={16} /><span className="hidden sm:inline">Toplu Önizle</span></button>
+            <button onClick={handleDownloadAllPDF} disabled={drivers.length === 0 || isDownloadingAll} className="flex items-center space-x-2 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 px-3 py-2 rounded-lg transition-colors font-medium border border-emerald-200 disabled:opacity-50 shadow-sm"><Printer size={16} /><span className="hidden sm:inline">{isDownloadingAll ? '...' : 'Toplu İndir'}</span></button>
         </div>
       </div>
 
