@@ -47,7 +47,7 @@ export const PrintableTransportPlan: React.FC<{
         table, th, td { border: 1px solid black !important; border-collapse: collapse !important; }
         .break-inside-avoid { page-break-inside: avoid; }
       `}</style>
-
+      
       <div className="text-center mb-6">
         <h2 className="text-xl font-bold">TAŞIMA PLANLAMA (EK-1)</h2>
         <div className="text-sm mt-1 font-bold uppercase">{settings.schoolName}</div>
@@ -109,7 +109,7 @@ export const PrintableTransportPlan: React.FC<{
           </tr>
         </tbody>
       </table>
-
+      
       <div className="mt-12 flex justify-around px-8 text-xs text-center font-bold break-inside-avoid">
           <div className="flex flex-col gap-8 min-w-[150px]">
               <div>DÜZENLEYEN</div>
@@ -148,72 +148,77 @@ export const TransportPlanning: React.FC<TransportPlanningProps> = ({ students, 
   const hiddenPrintRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const savedData = loadTransportPlanData();
-    const distanceData = loadDistanceReportData();
-    const distanceMap = new Map(distanceData.map((r: any) => [r.route, r.total]));
-    const routeMap = new Map<string, TableRow>();
-
-    students.forEach(student => {
-      if (!student.route) return;
-      const routeName = student.route.trim();
-      // Safe integer parsing for grade
-      const gradeStr = student.className.replace(/[^0-9]/g, '');
-      const grade = gradeStr ? parseInt(gradeStr) : 0;
-
-      if (!routeMap.has(routeName)) {
-        const saved = savedData[routeName] || {};
-        const initialClasses: Record<number, { K: number; E: number }> = {};
-        for (let i = 1; i <= 8; i++) initialClasses[i] = { K: 0, E: 0 };
-
-        const distance = distanceMap.has(routeName) ? distanceMap.get(routeName) : (saved.distance || 0);
-        const driver = drivers.find(d => d.routes.includes(routeName));
-        const seatCount = driver?.seatCount;
-
-        routeMap.set(routeName, {
-            id: routeName,
-            route: routeName,
-            distance: distance,
-            classes: initialClasses,
-            vehicleCount: saved.vehicleCount || 1,
-            capacity: seatCount || saved.capacity || 17,
-            dailyCost: saved.dailyCost || 0,
-            yearlyCost: saved.yearlyCost || 0,
-            reason: saved.reason || 'Ulaşım Güçlüğü'
+    const fetchData = async () => {
+        const savedData = await loadTransportPlanData();
+        const distanceData = await loadDistanceReportData();
+        const distanceMap = new Map(distanceData.map((r: any) => [r.route, r.total]));
+        const routeMap = new Map<string, TableRow>();
+        
+        students.forEach(student => {
+          if (!student.route) return;
+          const routeName = student.route.trim();
+          // Safe integer parsing for grade
+          const gradeStr = student.className.replace(/[^0-9]/g, '');
+          const grade = gradeStr ? parseInt(gradeStr) : 0;
+          
+          if (!routeMap.has(routeName)) {
+            const saved = savedData[routeName] || {};
+            const initialClasses: Record<number, { K: number; E: number }> = {};
+            for (let i = 1; i <= 8; i++) initialClasses[i] = { K: 0, E: 0 };
+            
+            const distance = distanceMap.has(routeName) ? distanceMap.get(routeName) : (saved.distance || 0);
+            const driver = drivers.find(d => d.routes.includes(routeName));
+            const seatCount = driver?.seatCount;
+    
+            routeMap.set(routeName, { 
+                id: routeName, 
+                route: routeName, 
+                distance: distance, 
+                classes: initialClasses, 
+                vehicleCount: saved.vehicleCount || 1, 
+                capacity: seatCount || saved.capacity || 17, 
+                dailyCost: saved.dailyCost || 0, 
+                yearlyCost: saved.yearlyCost || 0, 
+                reason: saved.reason || 'Ulaşım Güçlüğü' 
+            });
+          }
+          
+          const entry = routeMap.get(routeName)!;
+          if (grade >= 1 && grade <= 8) {
+            if (student.gender === 'KIZ' || (student.gender as any) === 'K') { 
+                entry.classes[grade].K++; 
+            } else if (student.gender === 'ERKEK' || (student.gender as any) === 'E') { 
+                entry.classes[grade].E++; 
+            }
+          }
         });
-      }
-
-      const entry = routeMap.get(routeName)!;
-      if (grade >= 1 && grade <= 8) {
-        if (student.gender === 'KIZ' || (student.gender as any) === 'K') {
-            entry.classes[grade].K++;
-        } else if (student.gender === 'ERKEK' || (student.gender as any) === 'E') {
-            entry.classes[grade].E++;
-        }
-      }
-    });
-
-    const calculatedRows = Array.from(routeMap.values()).sort((a, b) => a.route.localeCompare(b.route));
-    setRows(calculatedRows);
-
+    
+        const calculatedRows = Array.from(routeMap.values()).sort((a, b) => a.route.localeCompare(b.route));
+        setRows(calculatedRows);
+    };
+    fetchData();
   }, [students, drivers]);
-
+  
   useEffect(() => {
-      if (rows.length > 0) {
-          const dataToSave: Record<string, any> = {};
-          rows.forEach(row => {
-              dataToSave[row.route] = {
-                  distance: row.distance,
-                  vehicleCount: row.vehicleCount,
-                  capacity: row.capacity,
-                  dailyCost: row.dailyCost,
-                  yearlyCost: row.yearlyCost,
-                  reason: row.reason
-              };
-          });
-          saveTransportPlanData(dataToSave);
-      }
+      const saveData = async () => {
+          if (rows.length > 0) {
+              const dataToSave: Record<string, any> = {};
+              rows.forEach(row => {
+                  dataToSave[row.route] = {
+                      distance: row.distance,
+                      vehicleCount: row.vehicleCount,
+                      capacity: row.capacity,
+                      dailyCost: row.dailyCost,
+                      yearlyCost: row.yearlyCost,
+                      reason: row.reason
+                  };
+              });
+              await saveTransportPlanData(dataToSave);
+          }
+      };
+      saveData();
   }, [rows]);
-
+  
   const totals = rows.reduce((acc, row) => {
     let rowTotalK = 0; let rowTotalE = 0;
     for (let i = 1; i <= 8; i++) {
@@ -225,12 +230,12 @@ export const TransportPlanning: React.FC<TransportPlanningProps> = ({ students, 
     acc.totalVehicles += Number(row.vehicleCount) || 0;
     acc.totalCost += Number(row.yearlyCost) || 0;
     return acc;
-  }, {
-      classes: { 1: { K: 0, E: 0 }, 2: { K: 0, E: 0 }, 3: { K: 0, E: 0 }, 4: { K: 0, E: 0 }, 5: { K: 0, E: 0 }, 6: { K: 0, E: 0 }, 7: { K: 0, E: 0 }, 8: { K: 0, E: 0 } } as Record<number, { K: number; E: number }>,
+  }, { 
+      classes: { 1: { K: 0, E: 0 }, 2: { K: 0, E: 0 }, 3: { K: 0, E: 0 }, 4: { K: 0, E: 0 }, 5: { K: 0, E: 0 }, 6: { K: 0, E: 0 }, 7: { K: 0, E: 0 }, 8: { K: 0, E: 0 } } as Record<number, { K: number; E: number }>, 
       totalK: 0, totalE: 0, grandTotal: 0, totalVehicles: 0, totalCost: 0
   });
 
-  const handleUpdateRow = () => {
+  const handleUpdateRow = async () => {
       if (!editingRow) return;
       const updatedRow: TableRow = {
           ...editingRow,
@@ -241,9 +246,9 @@ export const TransportPlanning: React.FC<TransportPlanningProps> = ({ students, 
           yearlyCost: Number(editingRow.yearlyCost),
       };
       setRows(prev => prev.map(r => r.id === editingRow.id ? updatedRow : r));
-
+      
       // Sync to DistanceReport
-      const distanceData = loadDistanceReportData();
+      const distanceData = await loadDistanceReportData();
       const existingDistIndex = distanceData.findIndex((r: any) => r.route === updatedRow.route);
       if (existingDistIndex >= 0) {
           distanceData[existingDistIndex].asphalt = updatedRow.distance;
@@ -258,7 +263,7 @@ export const TransportPlanning: React.FC<TransportPlanningProps> = ({ students, 
               total: updatedRow.distance
           });
       }
-      saveDistanceReportData(distanceData);
+      await saveDistanceReportData(distanceData);
 
       setEditingRow(null);
   };
@@ -266,7 +271,7 @@ export const TransportPlanning: React.FC<TransportPlanningProps> = ({ students, 
   const handleDownloadPDF = () => {
     if (!hiddenPrintRef.current) return;
     setIsDownloading(true);
-
+    
     const element = hiddenPrintRef.current;
     const opt = {
       margin: 5,
@@ -287,8 +292,8 @@ export const TransportPlanning: React.FC<TransportPlanningProps> = ({ students, 
   return (
     <div className="space-y-6 animate-fade-in">
       {isPreviewing && (
-        <PrintPreview
-          title="Taşıma Planlama (Ek-1)"
+        <PrintPreview 
+          title="Taşıma Planlama (Ek-1)" 
           onBack={() => setIsPreviewing(false)}
           orientation={orientation}
         >
@@ -299,11 +304,11 @@ export const TransportPlanning: React.FC<TransportPlanningProps> = ({ students, 
       {/* Hidden for PDF generation */}
       <div className="hidden">
           <div ref={hiddenPrintRef}>
-            <PrintableTransportPlan
-                rows={rows}
-                totals={totals}
-                settings={settings}
-                orientation={orientation}
+            <PrintableTransportPlan 
+                rows={rows} 
+                totals={totals} 
+                settings={settings} 
+                orientation={orientation} 
             />
           </div>
       </div>
@@ -367,16 +372,16 @@ export const TransportPlanning: React.FC<TransportPlanningProps> = ({ students, 
             </div>
             <div className="flex flex-wrap items-center gap-2">
                 <div className="flex items-center bg-white border border-slate-200 rounded-lg p-1 mr-2">
-                    <button
-                        onClick={() => setOrientation('portrait')}
+                    <button 
+                        onClick={() => setOrientation('portrait')} 
                         className={`px-3 py-1.5 rounded text-xs font-medium flex items-center gap-1 transition-colors ${orientation === 'portrait' ? 'bg-blue-100 text-blue-700 shadow-sm' : 'text-slate-500 hover:bg-slate-50'}`}
                         title="Dikey"
                     >
                         <FileText size={14} />
                         <span>Dikey</span>
                     </button>
-                    <button
-                        onClick={() => setOrientation('landscape')}
+                    <button 
+                        onClick={() => setOrientation('landscape')} 
                         className={`px-3 py-1.5 rounded text-xs font-medium flex items-center gap-1 transition-colors ${orientation === 'landscape' ? 'bg-blue-100 text-blue-700 shadow-sm' : 'text-slate-500 hover:bg-slate-50'}`}
                         title="Yatay"
                     >

@@ -43,7 +43,7 @@ export const PrintableTransportReport: React.FC<{
         .justify-text { text-align: justify; text-justify: inter-word; }
         .break-inside-avoid { page-break-inside: avoid; }
       `}</style>
-
+      
       <div className="text-center font-bold text-base mb-6">
         <p>{settings.educationYear} EĞİTİM ÖĞRETİM YILI</p>
         <p>{settings.province} İLİ {settings.district} İLÇESİ</p>
@@ -113,95 +113,97 @@ export const TransportReport: React.FC<TransportReportProps> = ({ students, driv
 
   // Load / Initialize Data
   useEffect(() => {
-    // 1. Calculate stats from current student list
-    const stats = new Map<string, { p: number; m: number; total: number }>();
+    const loadData = async () => {
+        // 1. Calculate stats from current student list
+        const stats = new Map<string, { p: number; m: number; total: number }>();
+        
+        students.forEach(s => {
+            if (!s.route) return;
+            const route = s.route.trim();
+            if (!stats.has(route)) stats.set(route, { p: 0, m: 0, total: 0 });
+            
+            const entry = stats.get(route)!;
+            const grade = parseInt(s.className.replace(/[^0-9]/g, '')) || 0;
+            
+            if (grade >= 1 && grade <= 4) entry.p++;
+            else if (grade >= 5 && grade <= 8) entry.m++;
+            
+            entry.total++;
+        });
 
-    students.forEach(s => {
-        if (!s.route) return;
-        const route = s.route.trim();
-        if (!stats.has(route)) stats.set(route, { p: 0, m: 0, total: 0 });
+        // 2. Load External Data from other modules
+        const savedDescriptionsStr = localStorage.getItem('okulservis_report_descriptions_v1');
+        const savedDescriptions: Record<string, string> = savedDescriptionsStr ? JSON.parse(savedDescriptionsStr) : {};
 
-        const entry = stats.get(route)!;
-        const grade = parseInt(s.className.replace(/[^0-9]/g, '')) || 0;
+        const planData = await loadTransportPlanData(); // From Planning Page (Distance)
+        const distanceData = await loadDistanceReportData(); // From Distance Page (KM, Features)
+        const distanceMap = new Map(distanceData.map((d: any) => [d.route, d]));
 
-        if (grade >= 1 && grade <= 4) entry.p++;
-        else if (grade >= 5 && grade <= 8) entry.m++;
+        // 4. Merge Data and Generate Text
+        const mergedData: RouteReportData[] = Array.from(stats.entries()).sort((a,b) => a[0].localeCompare(b[0])).map(([route, counts], index) => {
+            
+            // --- Smart Data Fetching Logic ---
+            // A. Distance: Prefer "Distance Report" value, fallback to "Transport Plan", fallback to 0
+            const distFromReport = distanceMap.get(route)?.total;
+            const distFromPlan = planData[route]?.distance;
+            const distance = distFromReport || distFromPlan || 0;
 
-        entry.total++;
-    });
+            // B. Features: Prefer "Distance Report" features (e.g., "Asfalt, Virajlı")
+            let features = distanceMap.get(route)?.features || "yolu asfalt";
+            // Clean up features text to flow in sentence (lowercase if not special)
+            features = features.replace(/\.$/, ''); // Remove trailing dot
 
-    // 2. Load External Data from other modules
-    const savedDescriptionsStr = localStorage.getItem('okulservis_report_descriptions_v1');
-    const savedDescriptions: Record<string, string> = savedDescriptionsStr ? JSON.parse(savedDescriptionsStr) : {};
+            // C. Capacity: Match total student count as requested by user
+            const capacity = counts.total.toString();
 
-    const planData = loadTransportPlanData(); // From Planning Page (Distance)
-    const distanceData = loadDistanceReportData(); // From Distance Page (KM, Features)
-    const distanceMap = new Map(distanceData.map((d: any) => [d.route, d]));
+            // Generate Default Text dynamically using all sources
+            let studentPart = "";
+            if (counts.p > 0 && counts.m > 0) {
+                studentPart = `İlkokuldaki ${counts.p} öğrencinin yönetmeliğin 8/b maddesine göre aynı yerleşim yerindeki ${counts.m} ortaokul öğrencisiyle birlikte toplam ${counts.total} öğrencinin`;
+            } else if (counts.p > 0) {
+                studentPart = `İlkokuldaki ${counts.p} öğrencinin`;
+            } else if (counts.m > 0) {
+                studentPart = `Ortaokuldaki ${counts.m} öğrencinin`;
+            } else {
+                studentPart = `Toplam ${counts.total} öğrencinin`;
+            }
 
-    // 4. Merge Data and Generate Text
-    const mergedData: RouteReportData[] = Array.from(stats.entries()).sort((a,b) => a[0].localeCompare(b[0])).map(([route, counts], index) => {
+            const defaultDesc = `Taşıma merkezine uzaklığı ${distance} km olup güzergah özellikleri; ${features} niteliktedir. Yerleşim yerinde okul bulunmamaktadır. ${studentPart} ${capacity} koltuk kapasiteli bir araçla belirlenen taşıma merkezine taşınmasına.`;
 
-        // --- Smart Data Fetching Logic ---
-        // A. Distance: Prefer "Distance Report" value, fallback to "Transport Plan", fallback to 0
-        const distFromReport = distanceMap.get(route)?.total;
-        const distFromPlan = planData[route]?.distance;
-        const distance = distFromReport || distFromPlan || 0;
+            return {
+                id: route,
+                route,
+                distance,
+                primaryCount: counts.p,
+                middleCount: counts.m,
+                totalCount: counts.total,
+                description: savedDescriptions[route] || defaultDesc
+            };
+        });
 
-        // B. Features: Prefer "Distance Report" features (e.g., "Asfalt, Virajlı")
-        let features = distanceMap.get(route)?.features || "yolu asfalt";
-        // Clean up features text to flow in sentence (lowercase if not special)
-        features = features.replace(/\.$/, ''); // Remove trailing dot
-
-        // C. Capacity: Match total student count as requested by user
-        const capacity = counts.total.toString();
-
-        // Generate Default Text dynamically using all sources
-        let studentPart = "";
-        if (counts.p > 0 && counts.m > 0) {
-            studentPart = `İlkokuldaki ${counts.p} öğrencinin yönetmeliğin 8/b maddesine göre aynı yerleşim yerindeki ${counts.m} ortaokul öğrencisiyle birlikte toplam ${counts.total} öğrencinin`;
-        } else if (counts.p > 0) {
-            studentPart = `İlkokuldaki ${counts.p} öğrencinin`;
-        } else if (counts.m > 0) {
-            studentPart = `Ortaokuldaki ${counts.m} öğrencinin`;
-        } else {
-            studentPart = `Toplam ${counts.total} öğrencinin`;
+        setReportData(mergedData);
+        
+        // Load OABB names
+        const savedOabb = localStorage.getItem('okulservis_report_oabb_v1');
+        if (savedOabb) {
+            const parsed = JSON.parse(savedOabb);
+            setOabbPrimary(parsed.p || '');
+            setOabbMiddle(parsed.m || '');
         }
-
-        const defaultDesc = `Taşıma merkezine uzaklığı ${distance} km olup güzergah özellikleri; ${features} niteliktedir. Yerleşim yerinde okul bulunmamaktadır. ${studentPart} ${capacity} koltuk kapasiteli bir araçla belirlenen taşıma merkezine taşınmasına.`;
-
-        return {
-            id: route,
-            route,
-            distance,
-            primaryCount: counts.p,
-            middleCount: counts.m,
-            totalCount: counts.total,
-            description: savedDescriptions[route] || defaultDesc
-        };
-    });
-
-    setReportData(mergedData);
-
-    // Load OABB names
-    const savedOabb = localStorage.getItem('okulservis_report_oabb_v1');
-    if (savedOabb) {
-        const parsed = JSON.parse(savedOabb);
-        setOabbPrimary(parsed.p || '');
-        setOabbMiddle(parsed.m || '');
-    }
-
+    };
+    loadData();
   }, [students, drivers]);
 
   // Save changes
   const handleSaveDescription = (id: string, newDesc: string) => {
       setReportData(prev => {
           const newData = prev.map(item => item.id === id ? { ...item, description: newDesc } : item);
-
+          
           // Save to LocalStorage
           const descMap: Record<string, string> = {};
           newData.forEach(d => descMap[d.id] = d.description);
           localStorage.setItem('okulservis_report_descriptions_v1', JSON.stringify(descMap));
-
+          
           return newData;
       });
   };
@@ -211,16 +213,16 @@ export const TransportReport: React.FC<TransportReportProps> = ({ students, driv
   };
 
   // Reset text to auto-generated default (re-triggering the logic logic)
-  const handleResetText = (item: RouteReportData) => {
+  const handleResetText = async (item: RouteReportData) => {
       // Re-fetch fresh data for this specific item
-      const planData = loadTransportPlanData();
-      const distanceData = loadDistanceReportData();
+      const planData = await loadTransportPlanData();
+      const distanceData = await loadDistanceReportData();
       const distanceMap = new Map(distanceData.map((d: any) => [d.route, d]));
 
       const distFromReport = distanceMap.get(item.route)?.total;
       const distFromPlan = planData[item.route]?.distance;
       const distance = distFromReport || distFromPlan || 0;
-
+      
       let features = distanceMap.get(item.route)?.features || "yolu asfalt";
       features = features.replace(/\.$/, '');
 
@@ -239,23 +241,23 @@ export const TransportReport: React.FC<TransportReportProps> = ({ students, driv
       }
 
       const defaultDesc = `Taşıma merkezine uzaklığı ${distance} km olup güzergah özellikleri; ${features} niteliktedir. Yerleşim yerinde okul bulunmamaktadır. ${studentPart} ${capacity} koltuk kapasiteli bir araçla belirlenen taşıma merkezine taşınmasına.`;
-
+      
       if(confirm("Metni diğer sayfalardaki (Mesafe, Şoför/Koltuk, Planlama) güncel verilere göre sıfırlamak istediğinize emin misiniz?")) {
           handleSaveDescription(item.id, defaultDesc);
       }
   };
 
-  const handleResetAll = () => {
+  const handleResetAll = async () => {
     if(confirm("Tüm güzergahların açıklamalarını güncel verilerle (Mesafe, Şoför, Planlama, Öğrenci Sayıları) sıfırlamak istediğinize emin misiniz?")) {
-        const planData = loadTransportPlanData();
-        const distanceData = loadDistanceReportData();
+        const planData = await loadTransportPlanData();
+        const distanceData = await loadDistanceReportData();
         const distanceMap = new Map(distanceData.map((d: any) => [d.route, d]));
-
+        
         const newData = reportData.map(item => {
             const distFromReport = distanceMap.get(item.route)?.total;
             const distFromPlan = planData[item.route]?.distance;
             const distance = distFromReport || distFromPlan || 0;
-
+            
             let features = distanceMap.get(item.route)?.features || "yolu asfalt";
             features = features.replace(/\.$/, '');
 
@@ -273,12 +275,12 @@ export const TransportReport: React.FC<TransportReportProps> = ({ students, driv
             }
 
             const defaultDesc = `Taşıma merkezine uzaklığı ${distance} km olup güzergah özellikleri; ${features} niteliktedir. Yerleşim yerinde okul bulunmamaktadır. ${studentPart} ${capacity} koltuk kapasiteli bir araçla belirlenen taşıma merkezine taşınmasına.`;
-
+            
             return { ...item, description: defaultDesc };
         });
 
         setReportData(newData);
-
+        
         // Save to LocalStorage
         const descMap: Record<string, string> = {};
         newData.forEach(d => descMap[d.id] = d.description);
@@ -289,7 +291,7 @@ export const TransportReport: React.FC<TransportReportProps> = ({ students, driv
   const handleDownloadPDF = () => {
     if (!hiddenPrintRef.current) return;
     setIsDownloading(true);
-
+    
     const element = hiddenPrintRef.current;
     const opt = {
       margin: 20,
@@ -310,14 +312,14 @@ export const TransportReport: React.FC<TransportReportProps> = ({ students, driv
   return (
     <div className="space-y-6">
       {isPreviewing && (
-        <PrintPreview
-          title="Taşımalı Eğitim Raporu"
+        <PrintPreview 
+          title="Taşımalı Eğitim Raporu" 
           onBack={() => setIsPreviewing(false)}
           orientation={orientation}
         >
-          <PrintableTransportReport
-            reportData={reportData}
-            settings={settings}
+          <PrintableTransportReport 
+            reportData={reportData} 
+            settings={settings} 
             oabbPrimary={oabbPrimary}
             oabbMiddle={oabbMiddle}
             orientation={orientation}
@@ -328,12 +330,12 @@ export const TransportReport: React.FC<TransportReportProps> = ({ students, driv
       {/* Hidden for PDF generation */}
       <div className="hidden">
           <div ref={hiddenPrintRef}>
-            <PrintableTransportReport
-                reportData={reportData}
-                settings={settings}
+            <PrintableTransportReport 
+                reportData={reportData} 
+                settings={settings} 
                 oabbPrimary={oabbPrimary}
                 oabbMiddle={oabbMiddle}
-                orientation={orientation}
+                orientation={orientation} 
             />
           </div>
       </div>
@@ -344,7 +346,7 @@ export const TransportReport: React.FC<TransportReportProps> = ({ students, driv
           <h1 className="text-2xl font-bold text-slate-800">Taşımalı Eğitim Raporu</h1>
           <p className="text-slate-500 text-sm">Yönetmelik gereği oluşturulan taşıma karar raporu. Veriler diğer modüllerden otomatik çekilir.</p>
         </div>
-
+        
         <div className="flex flex-wrap items-center gap-2">
             <div className="flex items-center bg-white border border-slate-200 rounded-lg p-1 mr-2">
                 <button onClick={() => setOrientation('portrait')} className={`px-2 py-1.5 rounded text-xs font-medium flex items-center gap-1 transition-colors ${orientation === 'portrait' ? 'bg-blue-100 text-blue-700' : 'text-slate-500 hover:bg-slate-50'}`}><FileText size={14} /></button>
@@ -401,12 +403,12 @@ export const TransportReport: React.FC<TransportReportProps> = ({ students, driv
                   </div>
                   <div className="p-4">
                       <div className="relative">
-                          <textarea
+                          <textarea 
                             className="w-full p-3 border border-slate-300 rounded-lg text-sm leading-relaxed focus:ring-2 focus:ring-blue-500 outline-none min-h-[100px]"
                             value={item.description}
                             onChange={(e) => handleSaveDescription(item.id, e.target.value)}
                           />
-                          <button
+                          <button 
                             onClick={() => handleResetText(item)}
                             className="absolute top-2 right-2 p-1.5 text-slate-400 hover:text-blue-600 bg-white border border-slate-200 rounded shadow-sm transition-colors"
                             title="Güncel Verilerle Sıfırla"

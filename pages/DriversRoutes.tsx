@@ -58,23 +58,23 @@ export const PrintableDriversRoutes: React.FC<{
 
 export const DriversRoutes: React.FC<DriversRoutesProps> = ({ students, setStudents, drivers, setDrivers, settings, onUpdateSettings }) => {
   const [activeTab, setActiveTab] = useState<'drivers' | 'routes' | 'assign'>('drivers');
-
+  
   // Modals for Actions
   const [isAddDriverOpen, setIsAddDriverOpen] = useState(false);
   const [isAddRouteOpen, setIsAddRouteOpen] = useState(false);
   const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
-
+  
   const [editingDriver, setEditingDriver] = useState<Driver | null>(null);
   const [isPreviewing, setIsPreviewing] = useState(false);
   const [orientation, setOrientation] = useState<'portrait' | 'landscape'>('portrait');
   const location = useLocation();
   const navigate = useNavigate();
-
+  
   const [driverRouteInput, setDriverRouteInput] = useState('');
   const [editingRoute, setEditingRoute] = useState<string | null>(null);
   const [editRouteName, setEditRouteName] = useState('');
   const [editRouteDriver, setEditRouteDriver] = useState('');
-
+  
   // New Driver Inputs
   const [newDriverName, setNewDriverName] = useState('');
   const [newDriverPhone, setNewDriverPhone] = useState('');
@@ -82,11 +82,11 @@ export const DriversRoutes: React.FC<DriversRoutesProps> = ({ students, setStude
   const [newDriverPlate, setNewDriverPlate] = useState('');
   const [newDriverYear, setNewDriverYear] = useState('');
   const [newDriverSeat, setNewDriverSeat] = useState('');
-
+  
   // New Route State
   const [newRouteName, setNewRouteName] = useState('');
   const [newRouteDriver, setNewRouteDriver] = useState('');
-
+  
   // New Route Detail States (Updated for Multi-Stop)
   const [routeStops, setRouteStops] = useState<string[]>([]);
   const [currentStopInput, setCurrentStopInput] = useState('');
@@ -167,7 +167,7 @@ export const DriversRoutes: React.FC<DriversRoutesProps> = ({ students, setStude
           if (bulkFilterRoute !== 'all' && s.route !== bulkFilterRoute) return false;
           // Search Logic
           if (bulkSearchTerm && !s.name.toLocaleLowerCase('tr-TR').includes(bulkSearchTerm.toLocaleLowerCase('tr-TR'))) return false;
-
+          
           return true;
       }).sort((a,b) => a.name.localeCompare(b.name));
   }, [students, bulkFilterVillage, bulkFilterUnassigned, bulkSearchTerm, bulkFilterClass, bulkFilterDriver, bulkFilterRoute]);
@@ -189,18 +189,18 @@ export const DriversRoutes: React.FC<DriversRoutesProps> = ({ students, setStude
   };
 
   const handleBulkAssign = () => {
-      if (!bulkTargetDriver && !bulkTargetRoute && !bulkTargetVillage) {
-          alert("Lütfen atanacak en az bir bilgi (Şoför, Güzergah veya Adres) seçiniz.");
-          return;
+      if (!bulkTargetDriver && !bulkTargetRoute && !bulkTargetVillage) { 
+          alert("Lütfen atanacak en az bir bilgi (Şoför, Güzergah veya Adres) seçiniz."); 
+          return; 
       }
       if (bulkSelection.size === 0) { alert("Lütfen en az bir öğrenci seçiniz."); return; }
 
       // Update Students
       setStudents(prev => prev.map(s => {
           if (bulkSelection.has(s.id)) {
-              return {
-                  ...s,
-                  driver: bulkTargetDriver || s.driver,
+              return { 
+                  ...s, 
+                  driver: bulkTargetDriver || s.driver, 
                   route: bulkTargetRoute || s.route,
                   village: bulkTargetVillage || s.village
               };
@@ -227,24 +227,24 @@ export const DriversRoutes: React.FC<DriversRoutesProps> = ({ students, setStude
       return drv ? drv.displayRoutes : [];
   }, [bulkTargetDriver, driversData]);
 
-  const handleSaveDriver = () => {
+  const handleSaveDriver = async () => {
     if (!newDriverName) return;
-    const newDriver: Driver = {
-        id: `d${Date.now()}`,
-        name: newDriverName,
-        phone: newDriverPhone,
+    const newDriver: Driver = { 
+        id: `d${Date.now()}`, 
+        name: newDriverName, 
+        phone: newDriverPhone, 
         tcNumber: newDriverTC,
-        plateNumber: newDriverPlate,
+        plateNumber: newDriverPlate, 
         vehicleYear: newDriverYear ? parseInt(newDriverYear) : undefined,
         seatCount: newDriverSeat ? parseInt(newDriverSeat) : undefined,
-        routes: []
+        routes: [] 
     };
     setDrivers(prev => [...prev, newDriver]);
     setIsAddDriverOpen(false);
     setNewDriverName(''); setNewDriverPhone(''); setNewDriverTC(''); setNewDriverPlate(''); setNewDriverYear(''); setNewDriverSeat('');
   };
 
-  const handleUpdateDriver = (e: React.FormEvent) => {
+  const handleUpdateDriver = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingDriver) return;
 
@@ -260,15 +260,15 @@ export const DriversRoutes: React.FC<DriversRoutesProps> = ({ students, setStude
     }
 
     setDrivers(prev => prev.map(d => d.id === editingDriver.id ? editingDriver : d));
-
+    
     // Sync capacity to Transport Planning
-    const transportData = loadTransportPlanData();
+    const transportData = await loadTransportPlanData();
     editingDriver.routes.forEach(route => {
         if (transportData[route]) {
             transportData[route].capacity = editingDriver.seatCount || 17;
         }
     });
-    saveTransportPlanData(transportData);
+    await saveTransportPlanData(transportData);
 
     setEditingDriver(null);
     setDriverRouteInput('');
@@ -289,25 +289,25 @@ export const DriversRoutes: React.FC<DriversRoutesProps> = ({ students, setStude
   const initiateDeleteDriver = (id: string, name: string) => setDeleteConfirm({ isOpen: true, type: 'driver', id, name });
   const initiateDeleteRoute = (route: string) => setDeleteConfirm({ isOpen: true, type: 'route', id: route, name: route });
 
-  const performDelete = () => {
-    if (deleteConfirm.type === 'driver') { setDrivers(prev => prev.filter(d => d.id !== deleteConfirm.id)); }
-    else if (deleteConfirm.type === 'route') {
-        const routeName = deleteConfirm.id;
-        setStudents(prev => prev.map(s => s.route === routeName ? { ...s, route: '' } : s));
-        setDrivers(prev => prev.map(d => ({ ...d, routes: d.routes.filter(r => r !== routeName) })));
-
+  const performDelete = async () => {
+    if (deleteConfirm.type === 'driver') { setDrivers(prev => prev.filter(d => d.id !== deleteConfirm.id)); } 
+    else if (deleteConfirm.type === 'route') { 
+        const routeName = deleteConfirm.id; 
+        setStudents(prev => prev.map(s => s.route === routeName ? { ...s, route: '' } : s)); 
+        setDrivers(prev => prev.map(d => ({ ...d, routes: d.routes.filter(r => r !== routeName) }))); 
+        
         // Delete from Transport Planning
-        const transportData = loadTransportPlanData();
+        const transportData = await loadTransportPlanData();
         if (transportData[routeName]) {
             delete transportData[routeName];
-            saveTransportPlanData(transportData);
+            await saveTransportPlanData(transportData);
         }
 
         // Delete from Distance Report
-        const distanceData = loadDistanceReportData();
+        const distanceData = await loadDistanceReportData();
         const newDistanceData = distanceData.filter((r: any) => r.route !== routeName);
         if (newDistanceData.length !== distanceData.length) {
-            saveDistanceReportData(newDistanceData);
+            await saveDistanceReportData(newDistanceData);
         }
     }
     setDeleteConfirm({ isOpen: false, type: null, id: '', name: '' });
@@ -318,21 +318,21 @@ export const DriversRoutes: React.FC<DriversRoutesProps> = ({ students, setStude
     if (newRouteDriver) {
       setDrivers(prev => prev.map(d => d.name === newRouteDriver ? { ...d, routes: [...d.routes, newRouteName] } : d));
     } else { alert("Lütfen bu güzergahı bir şoföre atayınız veya önce şoför ekleyiniz."); return; }
-
+    
     setRouteStops([]); setCurrentStopInput(''); setNewRouteName(''); setNewRouteDriver('');
     setIsAddRouteOpen(false);
   };
 
-  const startEditRoute = (route: string) => {
-      setEditingRoute(route);
-      setEditRouteName(route);
+  const startEditRoute = (route: string) => { 
+      setEditingRoute(route); 
+      setEditRouteName(route); 
       const driver = drivers.find(d => d.routes.includes(route));
       setEditRouteDriver(driver ? driver.name : '');
   };
 
-  const saveRouteEdit = () => {
+  const saveRouteEdit = async () => {
     if (!editingRoute || !editRouteName) return;
-
+    
     const oldDriver = drivers.find(d => d.routes.includes(editingRoute))?.name;
     const isNameChanged = editingRoute !== editRouteName;
     const isDriverChanged = oldDriver !== editRouteDriver;
@@ -358,7 +358,7 @@ export const DriversRoutes: React.FC<DriversRoutesProps> = ({ students, setStude
       // Update Drivers
       setDrivers(prev => prev.map(d => {
           let updatedRoutes = [...d.routes];
-
+          
           // If this was the old driver, remove the old route
           if (d.name === oldDriver && isDriverChanged) {
               updatedRoutes = updatedRoutes.filter(r => r !== editingRoute);
@@ -369,7 +369,7 @@ export const DriversRoutes: React.FC<DriversRoutesProps> = ({ students, setStude
                   updatedRoutes.push(editRouteName);
               }
           }
-
+          
           // If driver didn't change, but name changed, update the name in the current driver's list
           if (!isDriverChanged && d.name === oldDriver && isNameChanged) {
               updatedRoutes = updatedRoutes.map(r => r === editingRoute ? editRouteName : r);
@@ -377,18 +377,18 @@ export const DriversRoutes: React.FC<DriversRoutesProps> = ({ students, setStude
 
           return { ...d, routes: updatedRoutes };
       }));
-
+      
       if (isNameChanged) {
           // Update Transport Planning Data
-          const transportData = loadTransportPlanData();
+          const transportData = await loadTransportPlanData();
           if (transportData[editingRoute]) {
               transportData[editRouteName] = transportData[editingRoute];
               delete transportData[editingRoute];
-              saveTransportPlanData(transportData);
+              await saveTransportPlanData(transportData);
           }
 
           // Update Distance Report Data
-          const distanceData = loadDistanceReportData();
+          const distanceData = await loadDistanceReportData();
           let distanceDataUpdated = false;
           const newDistanceData = distanceData.map((r: any) => {
               if (r.route === editingRoute) {
@@ -398,7 +398,7 @@ export const DriversRoutes: React.FC<DriversRoutesProps> = ({ students, setStude
               return r;
           });
           if (distanceDataUpdated) {
-              saveDistanceReportData(newDistanceData);
+              await saveDistanceReportData(newDistanceData);
           }
       }
     }
@@ -428,12 +428,12 @@ export const DriversRoutes: React.FC<DriversRoutesProps> = ({ students, setStude
       });
     }
   };
-
+  
   const renderDeleteConfirmModal = () => {
     if (!deleteConfirm.isOpen) return null;
     return (<div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"><div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden transform scale-100 transition-all"><div className="flex items-center justify-between p-4 border-b border-slate-100"><h3 className="text-lg font-bold text-slate-800 flex items-center gap-2"><AlertTriangle className="text-red-500" size={24} />Silme Onayı</h3><button onClick={() => setDeleteConfirm({ ...deleteConfirm, isOpen: false })} className="text-slate-400 hover:text-slate-600"><X size={20} /></button></div><div className="p-6"><p className="text-slate-600"><span className="font-bold text-slate-800">{deleteConfirm.name}</span> isimli {deleteConfirm.type === 'driver' ? 'şoförü' : 'güzergahı'} silmek istediğinize emin misiniz?</p>{deleteConfirm.type === 'route' && (<p className="text-xs text-red-500 mt-2 bg-red-50 p-2 rounded border border-red-100">Dikkat: Bu işlem ilgili öğrencilerin güzergah bilgisini temizleyecektir.</p>)}</div><div className="p-4 bg-slate-50 border-t border-slate-100 flex justify-end space-x-3"><button onClick={() => setDeleteConfirm({ ...deleteConfirm, isOpen: false })} className="px-4 py-2 text-slate-600 font-medium hover:bg-slate-200 rounded-lg transition-colors">İptal</button><button onClick={performDelete} className="px-4 py-2 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 transition-colors shadow-sm flex items-center gap-2"><Trash2 size={18} /><span>Evet, Sil</span></button></div></div></div>);
   };
-
+  
   const renderAddDriverModal = () => {
     if (!isAddDriverOpen) return null;
     return (
@@ -482,8 +482,8 @@ export const DriversRoutes: React.FC<DriversRoutesProps> = ({ students, setStude
     );
   };
 
-  const renderEditDriverModal = () => {
-    if (!editingDriver) return null;
+  const renderEditDriverModal = () => { 
+    if (!editingDriver) return null; 
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
             <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
@@ -539,11 +539,11 @@ export const DriversRoutes: React.FC<DriversRoutesProps> = ({ students, setStude
                 </div>
             </div>
         </div>
-    );
+    ); 
   };
-
-  const renderEditRouteModal = () => {
-    if (!editingRoute) return null;
+  
+  const renderEditRouteModal = () => { 
+    if (!editingRoute) return null; 
     return (
       <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
         <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
@@ -574,9 +574,9 @@ export const DriversRoutes: React.FC<DriversRoutesProps> = ({ students, setStude
           </div>
         </div>
       </div>
-    );
+    ); 
   };
-
+  
   const renderAddRouteModal = () => {
     if (!isAddRouteOpen) return null;
     return (
@@ -586,7 +586,7 @@ export const DriversRoutes: React.FC<DriversRoutesProps> = ({ students, setStude
             <h3 className="text-lg font-bold text-slate-800">Yeni Güzergah Oluştur</h3>
             <button onClick={() => setIsAddRouteOpen(false)} className="text-slate-400 hover:text-slate-600"><X size={20} /></button>
           </div>
-
+          
           <div className="px-6 pt-4">
              <div className="bg-yellow-50 p-2 text-xs text-yellow-800 rounded border border-yellow-200 flex items-center gap-2">
                 <MapPin size={14} className="shrink-0" />
@@ -597,22 +597,22 @@ export const DriversRoutes: React.FC<DriversRoutesProps> = ({ students, setStude
           </div>
 
           <div className="p-6 space-y-4">
-
+            
             {/* Route Stops Builder */}
             <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 mb-4">
                <label className="block text-xs font-bold text-blue-800 mb-2 uppercase flex items-center gap-1"><Milestone size={14}/> Güzergah Durakları / Köyler</label>
                <div className="flex gap-2 mb-2">
-                   <input
-                      type="text"
-                      className="flex-1 px-2 py-1.5 border border-blue-200 rounded text-sm focus:ring-1 focus:ring-blue-500 outline-none"
-                      placeholder="Köy veya Mahalle Adı..."
-                      value={currentStopInput}
+                   <input 
+                      type="text" 
+                      className="flex-1 px-2 py-1.5 border border-blue-200 rounded text-sm focus:ring-1 focus:ring-blue-500 outline-none" 
+                      placeholder="Köy veya Mahalle Adı..." 
+                      value={currentStopInput} 
                       onChange={(e) => setCurrentStopInput(e.target.value)}
                       onKeyDown={(e) => e.key === 'Enter' && handleAddStop()}
                    />
                    <button onClick={handleAddStop} className="px-3 py-1.5 bg-blue-600 text-white rounded text-sm font-medium hover:bg-blue-700 transition-colors">Ekle</button>
                </div>
-
+               
                <div className="flex flex-wrap gap-2 min-h-[40px] p-2 bg-white rounded border border-blue-100 max-h-[120px] overflow-y-auto">
                    {routeStops.length > 0 ? (
                        routeStops.map((stop, idx) => (
@@ -633,7 +633,7 @@ export const DriversRoutes: React.FC<DriversRoutesProps> = ({ students, setStude
               <input type="text" className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none font-bold text-slate-800 bg-slate-50" placeholder="Örn: Köy A - Köy B" value={newRouteName} onChange={(e) => setNewRouteName(e.target.value)} />
               <p className="text-[10px] text-slate-400 mt-1">Durakları ekledikçe isim otomatik oluşur, isterseniz elle düzeltebilirsiniz.</p>
             </div>
-
+            
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1">Atanacak Şoför (Zorunlu)</label>
               <select className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" value={newRouteDriver} onChange={(e) => setNewRouteDriver(e.target.value)}>
@@ -660,12 +660,12 @@ export const DriversRoutes: React.FC<DriversRoutesProps> = ({ students, setStude
                 <h3 className="font-bold text-lg flex items-center gap-2"><MapPin className="text-emerald-600"/> Adres / Köy Yönetimi</h3>
                 <button onClick={() => setIsAddressModalOpen(false)}><X className="text-slate-400 hover:text-slate-600" /></button>
              </div>
-
+             
              <div className="p-6 space-y-6">
                 <form onSubmit={handleAddAddress} className="flex gap-2">
-                    <input
-                        type="text"
-                        placeholder="Yeni Köy/Mahalle/Sokak Adı..."
+                    <input 
+                        type="text" 
+                        placeholder="Yeni Köy/Mahalle/Sokak Adı..." 
                         className="flex-1 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
                         value={newAddressName}
                         onChange={e => setNewAddressName(e.target.value)}
@@ -703,15 +703,15 @@ export const DriversRoutes: React.FC<DriversRoutesProps> = ({ students, setStude
                   <div className="flex items-center gap-3 flex-1 min-w-[200px]">
                       <div className="relative flex-1">
                           <Search className="absolute left-3 top-2.5 text-slate-400" size={16} />
-                          <input
-                              type="text"
-                              placeholder="Öğrenci ara..."
+                          <input 
+                              type="text" 
+                              placeholder="Öğrenci ara..." 
                               className="w-full pl-9 pr-4 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none"
                               value={bulkSearchTerm}
                               onChange={(e) => setBulkSearchTerm(e.target.value)}
                           />
                       </div>
-                      <button
+                      <button 
                           onClick={() => setBulkFilterUnassigned(!bulkFilterUnassigned)}
                           className={`p-2 rounded-lg border transition-colors ${bulkFilterUnassigned ? 'bg-orange-100 text-orange-700 border-orange-200' : 'bg-white text-slate-600 border-slate-300'}`}
                           title="Sadece Atanmamışları Göster"
@@ -719,9 +719,9 @@ export const DriversRoutes: React.FC<DriversRoutesProps> = ({ students, setStude
                           <AlertTriangle size={18} />
                       </button>
                   </div>
-
+                  
                   <div className="flex gap-2 flex-wrap items-center">
-                      <select
+                      <select 
                           className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-white"
                           value={bulkFilterVillage}
                           onChange={(e) => setBulkFilterVillage(e.target.value)}
@@ -729,7 +729,7 @@ export const DriversRoutes: React.FC<DriversRoutesProps> = ({ students, setStude
                           <option value="all">Tüm Köyler</option>
                           {(settings.quickVillages || []).map(v => <option key={v} value={v}>{v}</option>)}
                       </select>
-                      <select
+                      <select 
                           className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-white"
                           value={bulkFilterClass}
                           onChange={(e) => setBulkFilterClass(e.target.value)}
@@ -737,7 +737,7 @@ export const DriversRoutes: React.FC<DriversRoutesProps> = ({ students, setStude
                           <option value="all">Tüm Sınıflar</option>
                           {uniqueClasses.map(c => <option key={c} value={c}>{c}</option>)}
                       </select>
-                      <select
+                      <select 
                           className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-white"
                           value={bulkFilterDriver}
                           onChange={(e) => setBulkFilterDriver(e.target.value)}
@@ -745,7 +745,7 @@ export const DriversRoutes: React.FC<DriversRoutesProps> = ({ students, setStude
                           <option value="all">Tüm Şoförler</option>
                           {uniqueDriverNames.map(d => <option key={d} value={d}>{d}</option>)}
                       </select>
-                      <select
+                      <select 
                           className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-white"
                           value={bulkFilterRoute}
                           onChange={(e) => setBulkFilterRoute(e.target.value)}
@@ -753,9 +753,9 @@ export const DriversRoutes: React.FC<DriversRoutesProps> = ({ students, setStude
                           <option value="all">Tüm Güzergahlar</option>
                           {uniqueRoutes.map(r => <option key={r} value={r}>{r}</option>)}
                       </select>
-
+                      
                       {(bulkFilterVillage !== 'all' || bulkFilterClass !== 'all' || bulkFilterDriver !== 'all' || bulkFilterRoute !== 'all' || bulkSearchTerm !== '' || bulkFilterUnassigned) && (
-                          <button
+                          <button 
                               onClick={() => {
                                   setBulkFilterVillage('all');
                                   setBulkFilterClass('all');
@@ -779,8 +779,8 @@ export const DriversRoutes: React.FC<DriversRoutesProps> = ({ students, setStude
                   <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
                       <div className="flex items-center justify-between mb-3 px-2 bg-slate-50 p-2 rounded-lg border border-slate-200">
                           <div className="flex items-center gap-2">
-                              <button
-                                  onClick={toggleBulkSelectAll}
+                              <button 
+                                  onClick={toggleBulkSelectAll} 
                                   className={`flex items-center gap-2 px-3 py-1.5 rounded-md transition-colors ${bulkSelection.size > 0 && bulkSelection.size === bulkFilteredStudents.length ? 'bg-blue-100 text-blue-700' : 'bg-white text-slate-600 border border-slate-300 hover:bg-slate-100'}`}
                               >
                                   {bulkSelection.size > 0 && bulkSelection.size === bulkFilteredStudents.length ? <CheckSquare size={16} /> : <Square size={16} />}
@@ -791,13 +791,13 @@ export const DriversRoutes: React.FC<DriversRoutesProps> = ({ students, setStude
                               {bulkSelection.size} / {bulkFilteredStudents.length} Seçili
                           </span>
                       </div>
-
+                      
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                           {bulkFilteredStudents.map(student => {
                               const isSelected = bulkSelection.has(student.id);
                               return (
-                                  <div
-                                      key={student.id}
+                                  <div 
+                                      key={student.id} 
                                       onClick={() => toggleBulkSelection(student.id)}
                                       className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-all ${isSelected ? 'bg-blue-50 border-blue-300 shadow-sm ring-1 ring-blue-200' : 'bg-white border-slate-200 hover:border-blue-300 hover:shadow-sm'}`}
                                   >
@@ -847,13 +847,13 @@ export const DriversRoutes: React.FC<DriversRoutesProps> = ({ students, setStude
                           <UserPlus size={18} className="text-blue-600" />
                           Toplu Atama İşlemleri
                       </h3>
-
+                      
                       <div className="bg-white p-3 rounded-lg border border-slate-200 shadow-sm">
                           <div className="flex justify-between items-center mb-1">
                               <label className="block text-xs font-bold text-slate-500">Hedef Adres / Köy</label>
                               <button onClick={() => setIsAddressModalOpen(true)} className="text-[10px] text-emerald-600 hover:underline flex items-center gap-0.5"><Plus size={10}/>Yeni Ekle</button>
                           </div>
-                          <select
+                          <select 
                               className="w-full p-2 border border-slate-300 rounded text-sm focus:ring-2 focus:ring-blue-500 outline-none"
                               value={bulkTargetVillage}
                               onChange={(e) => setBulkTargetVillage(e.target.value)}
@@ -865,7 +865,7 @@ export const DriversRoutes: React.FC<DriversRoutesProps> = ({ students, setStude
 
                       <div className="bg-white p-3 rounded-lg border border-slate-200 shadow-sm">
                           <label className="block text-xs font-bold text-slate-500 mb-1">Hedef Şoför</label>
-                          <select
+                          <select 
                               className="w-full p-2 border border-slate-300 rounded text-sm focus:ring-2 focus:ring-blue-500 outline-none"
                               value={bulkTargetDriver}
                               onChange={(e) => {
@@ -880,7 +880,7 @@ export const DriversRoutes: React.FC<DriversRoutesProps> = ({ students, setStude
 
                       <div className="bg-white p-3 rounded-lg border border-slate-200 shadow-sm">
                           <label className="block text-xs font-bold text-slate-500 mb-1">Hedef Güzergah</label>
-                          <select
+                          <select 
                               className="w-full p-2 border border-slate-300 rounded text-sm focus:ring-2 focus:ring-blue-500 outline-none"
                               value={bulkTargetRoute}
                               onChange={(e) => setBulkTargetRoute(e.target.value)}
@@ -896,7 +896,7 @@ export const DriversRoutes: React.FC<DriversRoutesProps> = ({ students, setStude
                               <br/>
                               Seçili öğrencilerin bilgileri güncellenecek.
                           </div>
-                          <button
+                          <button 
                               onClick={handleBulkAssign}
                               disabled={bulkSelection.size === 0 || (!bulkTargetDriver && !bulkTargetRoute && !bulkTargetVillage)}
                               className="w-full py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-lg shadow transition-colors flex items-center justify-center gap-2"
@@ -930,14 +930,14 @@ export const DriversRoutes: React.FC<DriversRoutesProps> = ({ students, setStude
           <h1 className="text-2xl font-bold text-slate-800">Taşıma Yönetimi</h1>
           <p className="text-slate-500 text-sm">Şoförler, güzergahlar ve öğrenci atama işlemleri</p>
         </div>
-
+        
         <div className="flex flex-wrap items-center gap-3">
-
+          
           {/* Action Menu Group */}
           <div className="flex flex-wrap items-center bg-white p-1 rounded-xl border border-slate-200 shadow-sm">
              {/* 1. Şoför Listesi (Tab) */}
-             <button
-                onClick={() => setActiveTab('drivers')}
+             <button 
+                onClick={() => setActiveTab('drivers')} 
                 className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors font-medium text-sm ${activeTab === 'drivers' ? 'bg-slate-800 text-white' : 'bg-white text-slate-600 hover:bg-slate-50'}`}
              >
                 <User size={16} />
@@ -945,8 +945,8 @@ export const DriversRoutes: React.FC<DriversRoutesProps> = ({ students, setStude
              </button>
 
              {/* 2. Güzergah Listesi (Tab) */}
-             <button
-                onClick={() => setActiveTab('routes')}
+             <button 
+                onClick={() => setActiveTab('routes')} 
                 className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors font-medium text-sm ${activeTab === 'routes' ? 'bg-slate-800 text-white' : 'bg-white text-slate-600 hover:bg-slate-50'}`}
              >
                 <List size={16} />
@@ -956,8 +956,8 @@ export const DriversRoutes: React.FC<DriversRoutesProps> = ({ students, setStude
              <div className="w-px h-6 bg-slate-200 mx-1"></div>
 
              {/* 3. Toplu Atama (Tab) */}
-             <button
-                onClick={() => setActiveTab('assign')}
+             <button 
+                onClick={() => setActiveTab('assign')} 
                 className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors font-medium text-sm ${activeTab === 'assign' ? 'bg-slate-800 text-white' : 'bg-white text-slate-600 hover:bg-slate-50'}`}
              >
                 <UserPlus size={16} />
@@ -984,7 +984,7 @@ export const DriversRoutes: React.FC<DriversRoutesProps> = ({ students, setStude
           {(activeTab === 'drivers' || activeTab === 'routes') && (
             <div className="flex items-center gap-2 border-l border-slate-200 pl-4 ml-2">
                 <div className="flex items-center bg-white border border-slate-200 rounded-lg p-1">
-                    <button
+                    <button 
                     onClick={() => setOrientation('portrait')}
                     className={`px-3 py-1.5 rounded text-xs font-medium flex items-center gap-1 transition-colors ${orientation === 'portrait' ? 'bg-blue-100 text-blue-700' : 'text-slate-500 hover:bg-slate-50'}`}
                     title="Dikey"
@@ -992,7 +992,7 @@ export const DriversRoutes: React.FC<DriversRoutesProps> = ({ students, setStude
                     <FileText size={14} />
                     <span>Dikey</span>
                     </button>
-                    <button
+                    <button 
                     onClick={() => setOrientation('landscape')}
                     className={`px-3 py-1.5 rounded text-xs font-medium flex items-center gap-1 transition-colors ${orientation === 'landscape' ? 'bg-blue-100 text-blue-700' : 'text-slate-500 hover:bg-slate-50'}`}
                     title="Yatay"
@@ -1007,7 +1007,7 @@ export const DriversRoutes: React.FC<DriversRoutesProps> = ({ students, setStude
                 </button>
             </div>
           )}
-
+          
         </div>
       </div>
 

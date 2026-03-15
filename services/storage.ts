@@ -14,7 +14,9 @@ const KEYS = {
 export const loadStudents = (): Student[] => {
   try {
     const data = localStorage.getItem(KEYS.STUDENTS);
-    return data ? JSON.parse(data) : INITIAL_STUDENTS;
+    if (!data) return INITIAL_STUDENTS;
+    const parsed = JSON.parse(data);
+    return Array.isArray(parsed) ? parsed : INITIAL_STUDENTS;
   } catch (error) {
     console.error("Öğrenci verileri yüklenirken hata oluştu:", error);
     return INITIAL_STUDENTS;
@@ -32,7 +34,9 @@ export const saveStudents = (students: Student[]) => {
 export const loadDrivers = (): Driver[] => {
   try {
     const data = localStorage.getItem(KEYS.DRIVERS);
-    return data ? JSON.parse(data) : INITIAL_DRIVERS;
+    if (!data) return INITIAL_DRIVERS;
+    const parsed = JSON.parse(data);
+    return Array.isArray(parsed) ? parsed : INITIAL_DRIVERS;
   } catch (error) {
     console.error("Şoför verileri yüklenirken hata oluştu:", error);
     return INITIAL_DRIVERS;
@@ -50,8 +54,13 @@ export const saveDrivers = (drivers: Driver[]) => {
 export const loadSettings = (): AppSettings => {
   try {
     const data = localStorage.getItem(KEYS.SETTINGS);
+    if (!data) return INITIAL_SETTINGS;
+    const parsed = JSON.parse(data);
+    if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+      return INITIAL_SETTINGS;
+    }
     // Merge with initial settings to ensure all fields exist if new ones are added later
-    return data ? { ...INITIAL_SETTINGS, ...JSON.parse(data) } : INITIAL_SETTINGS;
+    return { ...INITIAL_SETTINGS, ...parsed };
   } catch (error) {
     console.error("Ayarlar yüklenirken hata oluştu:", error);
     return INITIAL_SETTINGS;
@@ -71,7 +80,12 @@ export const saveSettings = (settings: AppSettings) => {
 export const loadTransportPlanData = (): Record<string, any> => {
   try {
     const data = localStorage.getItem(KEYS.TRANSPORT_PLAN);
-    return data ? JSON.parse(data) : {};
+    if (!data) return {};
+    const parsed = JSON.parse(data);
+    if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+      return {};
+    }
+    return parsed;
   } catch (error) {
     return {};
   }
@@ -88,7 +102,9 @@ export const saveTransportPlanData = (data: Record<string, any>) => {
 export const loadDistanceReportData = (): any[] => {
   try {
     const data = localStorage.getItem(KEYS.DISTANCE_REPORT);
-    return data ? JSON.parse(data) : [];
+    if (!data) return [];
+    const parsed = JSON.parse(data);
+    return Array.isArray(parsed) ? parsed : [];
   } catch (error) {
     return [];
   }
@@ -105,7 +121,9 @@ export const saveDistanceReportData = (data: any[]) => {
 export const loadSavedPlannings = (): SavedPlanning[] => {
   try {
     const data = localStorage.getItem(KEYS.SAVED_PLANNINGS);
-    return data ? JSON.parse(data) : [];
+    if (!data) return [];
+    const parsed = JSON.parse(data);
+    return Array.isArray(parsed) ? parsed : [];
   } catch (error) {
     console.error("Kayıtlı planlamalar yüklenirken hata oluştu:", error);
     return [];

@@ -179,10 +179,10 @@ export const Reports: React.FC<{ students: Student[]; drivers: Driver[]; setting
   const [transportPlanRows, setTransportPlanRows] = useState<any[]>([]);
   
   useEffect(() => {
-    const savedDataStr = localStorage.getItem('okulservis_transport_plan_v1');
-    const savedData = savedDataStr ? JSON.parse(savedDataStr) : loadTransportPlanData();
-
-    const routeMap = new Map<string, any>();
+    const fetchData = async () => {
+        const savedData = await loadTransportPlanData();
+        
+        const routeMap = new Map<string, any>();
     students.forEach(student => {
       if (!student.route) return;
       const routeName = student.route.trim();
@@ -209,11 +209,13 @@ export const Reports: React.FC<{ students: Student[]; drivers: Driver[]; setting
         else if (student.gender === 'ERKEK' || (student.gender as any) === 'E') { entry.classes[grade].E++; }
       }
     });
-    setTransportPlanRows(Array.from(routeMap.values()).sort((a: any, b: any) => {
-      const ra = String(a.route || '');
-      const rb = String(b.route || '');
-      return ra.localeCompare(rb);
-    }));
+        setTransportPlanRows(Array.from(routeMap.values()).sort((a: any, b: any) => {
+          const ra = String(a.route || '');
+          const rb = String(b.route || '');
+          return ra.localeCompare(rb);
+        }));
+    };
+    fetchData();
   }, [students]);
 
   const transportPlanTotals = useMemo(() => transportPlanRows.reduce((acc, row) => {
@@ -231,25 +233,28 @@ export const Reports: React.FC<{ students: Student[]; drivers: Driver[]; setting
   const [distanceReportRows, setDistanceReportRows] = useState<any[]>([]);
   
   useEffect(() => {
-      const savedData = loadDistanceReportData();
-      const savedRowsMap = new Map<string, any>(savedData.map((r: any) => [r.route, r]));
-
-      const uniqueRoutes = Array.from<string>(new Set(students.map(s => s.route).filter(r => r && r.trim() !== ''))).sort();
-      
-      const newRows = uniqueRoutes.map((route, index) => {
-          const saved = savedRowsMap.get(route);
-          if (saved) {
-              return { ...saved, id: index + 1, total: (Number(saved.asphalt) || 0) + (Number(saved.stabilize) || 0) };
+      const fetchData = async () => {
+          const savedData = await loadDistanceReportData();
+          const savedRowsMap = new Map<string, any>(savedData.map((r: any) => [r.route, r]));
+    
+          const uniqueRoutes = Array.from<string>(new Set(students.map(s => s.route).filter(r => r && r.trim() !== ''))).sort();
+          
+          const newRows = uniqueRoutes.map((route, index) => {
+              const saved = savedRowsMap.get(route);
+              if (saved) {
+                  return { ...saved, id: index + 1, total: (Number(saved.asphalt) || 0) + (Number(saved.stabilize) || 0) };
+              } else {
+                  return { id: index + 1, route: route, features: 'Tamamı asfalttır.', asphalt: 0, stabilize: 0, total: 0 };
+              }
+          });
+          
+          if (uniqueRoutes.length === 0 && savedData.length > 0) {
+              setDistanceReportRows(savedData);
           } else {
-              return { id: index + 1, route: route, features: 'Tamamı asfalttır.', asphalt: 0, stabilize: 0, total: 0 };
+              setDistanceReportRows(newRows);
           }
-      });
-      
-      if (uniqueRoutes.length === 0 && savedData.length > 0) {
-          setDistanceReportRows(savedData);
-      } else {
-          setDistanceReportRows(newRows);
-      }
+      };
+      fetchData();
   }, [students]);
 
   const distanceRouteCounts = useMemo(() => {
