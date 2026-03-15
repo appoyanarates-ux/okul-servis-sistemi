@@ -2,6 +2,9 @@ const { app, BrowserWindow, dialog, ipcMain } = require("electron");
 const path = require("path");
 const { autoUpdater } = require("electron-updater");
 
+// SSL/Sertifika hatalarını bazı durumlarda görmezden gelmek için (İndirme hatasını önleyebilir)
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+
 function createWindow() {
   const win = new BrowserWindow({
     width: 1400,
@@ -30,8 +33,8 @@ function createUpdaterWindow() {
 
   updaterWindow = new BrowserWindow({
     width: 400,
-    height: 250,
-    frame: false, // Kenarlıksız
+    height: 300, // Biraz büyüttük hatalar sığsın diye
+    frame: false,
     transparent: false,
     resizable: false,
     alwaysOnTop: true,
@@ -51,24 +54,27 @@ function createUpdaterWindow() {
 app.whenReady().then(() => {
   createWindow();
 
+  // Güncelleme ayarları
+  autoUpdater.autoDownload = true;
+  autoUpdater.allowPrerelease = false;
+
   // Güncelleme kontrolü başlat
   autoUpdater.checkForUpdatesAndNotify();
 });
 
-// Güncelleme bulunduğunda pencereyi aç ve mesajı yolla
-autoUpdater.on('update-available', () => {
+// Güncelleme bulunduğunda
+autoUpdater.on('update-available', (info) => {
   createUpdaterWindow();
   if (updaterWindow) {
-    updaterWindow.webContents.send('update-message', 'Yeni güncelleme bulundu. İndirme başlıyor...');
+    updaterWindow.webContents.send('update-message', `Yeni sürüm bulundu: v${info.version}`);
   }
 });
 
-// Güncelleme yoksa (isteğe bağlı, görmek isterseniz diye loglanabilir)
 autoUpdater.on('update-not-available', () => {
   // console.log('Güncelleme yok');
 });
 
-// İndirme ilerlemesini HTML dosyasına yolla
+// İndirme ilerlemesi
 autoUpdater.on('download-progress', (progressObj) => {
   if (!updaterWindow) {
     createUpdaterWindow();
@@ -76,29 +82,27 @@ autoUpdater.on('download-progress', (progressObj) => {
   updaterWindow.webContents.send('download-progress', progressObj);
 });
 
-// Güncelleme indirildiğinde yeniden başlatmayı sor
+// Güncelleme indirildiğinde
 autoUpdater.on('update-downloaded', () => {
   if (updaterWindow) {
-    // Mesajı güncelle
     updaterWindow.webContents.send('update-message', 'Güncelleme hazır. Yeniden başlatılıyor...');
-    
-    // 2 saniye sonra otomatik kur
     setTimeout(() => {
-      updaterWindow.close();
       autoUpdater.quitAndInstall();
-    }, 2000);
+    }, 3000);
   } else {
     autoUpdater.quitAndInstall();
   }
 });
 
+// HATA YÖNETİMİ
 autoUpdater.on('error', (err) => {
-  console.log('Güncelleme hatası: ', err);
+  console.error('Güncelleme hatası:', err);
   if (updaterWindow) {
-    updaterWindow.webContents.send('update-message', 'Güncelleme sırasında bir hata oluştu: ' + err.message);
+    updaterWindow.webContents.send('update-message', 'Hata: ' + (err.message || 'Bağlantı kesildi'));
+    // Hata durumunda pencereyi hemen kapatma ki kullanıcı görsün
     setTimeout(() => {
-      updaterWindow.close();
-    }, 5000);
+      if (updaterWindow) updaterWindow.close();
+    }, 10000);
   }
 });
 
